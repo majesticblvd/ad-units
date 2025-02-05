@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
+import { RefreshCcw } from "lucide-react"
+
 
 interface Ad {
   id: string
@@ -70,10 +72,10 @@ export function AdList() {
         {filteredAds.map((ad) => (
           <div
             key={ad.id}
-            className="border rounded p-4 overflow-hidden flex flex-col items-center"
+            className="border rounded-lg w-fit p-4 overflow-hidden flex flex-col "
           >
-            <h3 className="font-semibold">{ad.campaign_name}</h3>
-            <p>Size: {ad.ad_size}</p>
+            <h3 className="text-lg  font-semibold">{ad.campaign_name}</h3>
+            
             {/* Wrap the preview in a container that clips any overflow */}
             <div className="mt-4 w-full flex justify-center items-center overflow-hidden">
               {ad.files[1] && (
@@ -85,9 +87,10 @@ export function AdList() {
                 />
               )}
             </div>
-            <div className="mt-2">
+            <div className="mt-4 flex w-full justify-between items-center">
+              <p className="rounded-full px-2 py-0 w-fit bg-[#0dab5439] border-[#0DAB53] border">Size: {ad.ad_size}</p>
               <Button variant="outline" size="sm" onClick={() => handleReplay(ad.id)}>
-                Replay
+                <RefreshCcw className="" size={16} />
               </Button>
             </div>
           </div>
