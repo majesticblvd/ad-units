@@ -69,11 +69,12 @@ export function AdUploadForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="campaignName">Campaign Name</Label>
-        <Input id="campaignName" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} required />
+        <Input className="bg-transparent border-gray-300 shadow-none" id="campaignName" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} required />
       </div>
       <div>
         <Label htmlFor="adSize">Ad Size</Label>
         <Input
+          className="bg-transparent border-gray-300 shadow-none"
           id="adSize"
           value={adSize}
           onChange={(e) => setAdSize(e.target.value)}
@@ -81,11 +82,11 @@ export function AdUploadForm() {
           required
         />
       </div>
-      <div>
+      <div >
         <Label htmlFor="files">Ad Files</Label>
-        <Input id="files" type="file" onChange={(e) => setFiles(e.target.files)} multiple required />
+        <Input className="bg-transparent border-gray-300 shadow-none mb-4" id="files" type="file" onChange={(e) => setFiles(e.target.files)} multiple required />
       </div>
-      <Button type="submit">Upload Ad</Button>
+      <Button className="w-full" type="submit">Upload Ad</Button>
     </form>
   )
 }
