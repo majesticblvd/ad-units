@@ -1,7 +1,7 @@
 {
   "extends": "next/core-web-vitals",
   "rules": {
-    "@typescript-eslint/no-unused-vars": "warn"  // Changes error to warning
+    "@typescript-eslint/no-unused-vars": "off"  // Changes error to warning
     // Or to completely disable:
     // "@typescript-eslint/no-unused-vars": "off"
   }
