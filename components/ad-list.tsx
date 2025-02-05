@@ -3,10 +3,21 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
 import { RefreshCcw } from "lucide-react"
-
+import { toast } from "@/hooks/use-toast"
 
 interface Ad {
   id: string
@@ -50,6 +61,28 @@ export function AdList() {
     }))
   }
 
+  // Handle ad deletion using Supabase and update local state.
+  const handleDelete = async (adId: string) => {
+    try {
+      const { error } = await supabase.from("ads").delete().eq("id", adId)
+      if (error) throw error
+
+      toast({
+        title: "Ad Deleted",
+        description: "The ad was deleted successfully.",
+      })
+      // Remove the deleted ad from state.
+      setAds((prevAds) => prevAds.filter((ad) => ad.id !== adId))
+    } catch (error) {
+      console.error("Delete error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete the ad.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
@@ -72,10 +105,10 @@ export function AdList() {
         {filteredAds.map((ad) => (
           <div
             key={ad.id}
-            className="border rounded-lg w-fit p-4 overflow-hidden flex flex-col "
+            className="border rounded-lg w-fit p-4 overflow-hidden flex flex-col"
           >
-            <h3 className="text-lg  font-semibold">{ad.campaign_name}</h3>
-            
+            <h3 className="text-lg font-semibold">{ad.campaign_name}</h3>
+
             {/* Wrap the preview in a container that clips any overflow */}
             <div className="mt-4 w-full flex justify-center items-center overflow-hidden">
               {ad.files[1] && (
@@ -87,11 +120,37 @@ export function AdList() {
                 />
               )}
             </div>
+
             <div className="mt-4 flex w-full justify-between items-center">
-              <p className="rounded-full px-2 py-0 w-fit bg-[#0dab5439] border-[#0DAB53] border">Size: {ad.ad_size}</p>
-              <Button variant="outline" size="sm" onClick={() => handleReplay(ad.id)}>
-                <RefreshCcw className="" size={16} />
-              </Button>
+              <p className="rounded-full px-2 py-0 w-fit bg-[#0dab5439] border-[#0DAB53] border">
+                Size: {ad.ad_size}
+              </p>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={() => handleReplay(ad.id)}>
+                  <RefreshCcw size={16} />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your ad.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(ad.id)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
           </div>
         ))}
