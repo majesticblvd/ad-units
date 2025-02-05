@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
+import { AdPreview } from "./ad-preview"
 
 interface Ad {
   id: string
@@ -12,9 +13,11 @@ interface Ad {
   files: string[]
 }
 
+
 export function AdList() {
   const [ads, setAds] = useState<Ad[]>([])
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all")
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAds()
@@ -55,14 +58,21 @@ export function AdList() {
           <div key={ad.id} className="border rounded p-4">
             <h3 className="font-semibold">{ad.campaign_name}</h3>
             <p>Size: {ad.ad_size}</p>
-            <div className="mt-2">
-              {ad.files.map((file, index) => (
-                <Button key={index} variant="outline" className="mr-2 mb-2" asChild>
-                  <a href={file} target="_blank" rel="noopener noreferrer">
-                    View File {index + 1}
-                  </a>
+            
+            {/* Add the preview section */}
+            <div className="mt-4 flex justify-center">
+            {ad.files[1] && (
+              <div className="space-y-2">
+                <AdPreview adFile={ad.files[1]} adSize={ad.ad_size} />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.open(ad.files[1], '_blank')}
+                >
+                  View Full Size
                 </Button>
-              ))}
+              </div>
+            )}
             </div>
           </div>
         ))}
