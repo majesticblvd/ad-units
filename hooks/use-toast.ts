@@ -1,6 +1,6 @@
 "use client"
 
-// Inspired by react-hot-toast library
+// Inspired by react-hot-toast library meow
 import * as React from "react"
 
 import type {
