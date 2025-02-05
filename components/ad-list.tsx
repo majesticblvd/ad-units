@@ -26,7 +26,11 @@ interface Ad {
   files: string[]
 }
 
-export function AdList() {
+interface AdListProps {
+  refreshSignal?: number
+}
+
+export function AdList({ refreshSignal }: AdListProps) {
   const [ads, setAds] = useState<Ad[]>([])
   const [selectedCampaign, setSelectedCampaign] = useState<string>("all")
   // This object holds a replay counter for each ad.
@@ -34,7 +38,8 @@ export function AdList() {
 
   useEffect(() => {
     fetchAds()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal])
 
   const fetchAds = async () => {
     try {
