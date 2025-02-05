@@ -38,7 +38,6 @@ export function AdList({ refreshSignal }: AdListProps) {
 
   useEffect(() => {
     fetchAds()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshSignal])
 
   const fetchAds = async () => {
@@ -66,18 +65,55 @@ export function AdList({ refreshSignal }: AdListProps) {
     }))
   }
 
-  // Handle ad deletion using Supabase and update local state.
-  const handleDelete = async (adId: string) => {
+  // Helper: Extract the file path from the public URL.
+  // For example, if the file URL is:
+  // https://<project-ref>.supabase.co/storage/v1/object/public/ad-files/my-campaign/my-image.png
+  // then the file path is: "my-campaign/my-image.png"
+  // A more flexible file path extraction function.
+  const extractFilePath = (fileUrl: string): string => {
     try {
-      const { error } = await supabase.from("ads").delete().eq("id", adId)
-      if (error) throw error
+      // Split the URL on "/ad-files/" and take the portion after it.
+      const parts = fileUrl.split("/ad-files/")
+      if (parts.length > 1) {
+        // This will return, for example, "my-campaign/my-image.png"
+        return parts[1]
+      } else {
+        console.error("Could not extract file path from:", fileUrl)
+      }
+    } catch (error) {
+      console.error("Error extracting file path:", error)
+    }
+    return ""
+  }
+
+  // Handle ad deletion using Supabase and update local state.
+  // Now accepts the entire ad so we can access its files.
+  const handleDelete = async (ad: Ad) => {
+    try {
+      // First, remove files from storage.
+      for (const fileUrl of ad.files) {
+        const filePath = extractFilePath(fileUrl)
+        if (filePath) {
+          const { error: storageError } = await supabase
+            .storage
+            .from("ad-files")
+            .remove([filePath])
+          if (storageError) {
+            console.error("Storage delete error:", storageError)
+            // Optionally, you could throw here to stop the deletion process.
+          }
+        }
+      }
+      // Now, remove the ad from the database.
+      const { error: dbError } = await supabase.from("ads").delete().eq("id", ad.id)
+      if (dbError) throw dbError
 
       toast({
         title: "Ad Deleted",
         description: "The ad was deleted successfully.",
       })
       // Remove the deleted ad from state.
-      setAds((prevAds) => prevAds.filter((ad) => ad.id !== adId))
+      setAds((prevAds) => prevAds.filter((a) => a.id !== ad.id))
     } catch (error) {
       console.error("Delete error:", error)
       toast({
@@ -144,12 +180,12 @@ export function AdList({ refreshSignal }: AdListProps) {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your ad.
+                        This action cannot be undone. This will permanently delete your ad and its files.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(ad.id)}>
+                      <AlertDialogAction onClick={() => handleDelete(ad)}>
                         Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
