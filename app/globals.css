@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* fontface from file */
+@font-face {
+  font-family: 'PPNeueMontreal';
+  src: url('./fonts/PPNeueMontreal-Variable.woff') format('woff');
+  font-weight: 100 200 300 400 500 600 700 800 900;
+  font-style: normal;
+}
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'PPNeueMontreal', sans-serif;
 }
 
 @layer utilities {

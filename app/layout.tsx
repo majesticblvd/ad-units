@@ -12,6 +12,11 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
+const ppNeueMontreal = localFont({
+  src: "./fonts/PPNeueMontreal-Variable.woff",
+  variable: "--font-pp-neue-montreal",
+  weight: "100 200 300 400 500 600 700 800 900",
+});
 
 export const metadata: Metadata = {
   title: "Ad Showcase",
@@ -26,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${ppNeueMontreal.variable} ${ppNeueMontreal.variable} antialiased`}
       >
         {children}
       </body>
