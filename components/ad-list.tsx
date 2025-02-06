@@ -93,6 +93,7 @@ export function AdList({ refreshSignal }: AdListProps) {
       // First, remove files from storage.
       for (const fileUrl of ad.files) {
         const filePath = extractFilePath(fileUrl)
+        console.log('File path:', filePath)
         if (filePath) {
           const { error: storageError } = await supabase
             .storage

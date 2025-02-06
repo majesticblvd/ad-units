@@ -35,7 +35,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
         const { error: uploadError } = await supabase
           .storage
           .from("ad-files")
-          .upload(`${campaignName}/${file.name}`, file)
+          .upload(`${campaignName}/${file.name}`, file, { upsert: true })
 
         if (uploadError) {
           console.error("File upload error:", uploadError)
