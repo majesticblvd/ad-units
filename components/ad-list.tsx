@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
-import { RefreshCcw } from "lucide-react"
+import { RefreshCcw, Share } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { ShareDialogButton } from "./share-button"
 
 interface Ad {
   id: string
@@ -159,6 +160,8 @@ export function AdList({ refreshSignal }: AdListProps) {
 
   return (
     <div className="space-y-4">
+      <div className="flex gap-2">
+
       <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
         <SelectTrigger>
           <SelectValue placeholder="Select Campaign" />
@@ -172,6 +175,8 @@ export function AdList({ refreshSignal }: AdListProps) {
           ))}
         </SelectContent>
       </Select>
+      <ShareDialogButton className="ml-auto" campaigns={campaigns} />
+      </div>
 
       <div
         className="grid gap-4"

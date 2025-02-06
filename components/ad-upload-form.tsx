@@ -67,11 +67,23 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
     }
   }
 
+  // Generate a unique share token for the new campaign
+  const generateShareToken = () => {
+    // Generate a random 32-character string
+    return Array.from(crypto.getRandomValues(new Uint8Array(24)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
   const handleCreateCampaign = async () => {
     try {
+      const shareToken = generateShareToken()
       const { data, error } = await supabase
         .from("campaigns")
-        .insert([{ name: newCampaignName }])
+        .insert([{ 
+          name: newCampaignName,
+          share_token: shareToken
+         }])
         .select()
         .single()
 
