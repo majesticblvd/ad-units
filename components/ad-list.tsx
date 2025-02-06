@@ -21,9 +21,15 @@ import { toast } from "@/hooks/use-toast"
 
 interface Ad {
   id: string
+  campaign_id: string
   campaign_name: string
   ad_size: string
   files: string[]
+}
+
+interface Campaign {
+  id: string
+  name: string
 }
 
 interface AdListProps {
@@ -32,32 +38,63 @@ interface AdListProps {
 
 export function AdList({ refreshSignal }: AdListProps) {
   const [ads, setAds] = useState<Ad[]>([])
-  const [selectedCampaign, setSelectedCampaign] = useState<string>("all")
-  // This object holds a replay counter for each ad.
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all")
   const [replayCounters, setReplayCounters] = useState<{ [key: string]: number }>({})
 
   useEffect(() => {
-    fetchAds()
+    fetchData()
   }, [refreshSignal])
 
-  const fetchAds = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase.from("ads").select("*")
-      if (error) throw error
-      setAds(data || [])
+      // Fetch campaigns
+      const { data: campaignData, error: campaignError } = await supabase
+        .from("campaigns")
+        .select("id, name")
+        .order("name")
+      
+      if (campaignError) throw campaignError
+      setCampaigns(campaignData || [])
+
+      // Fetch ads with campaign information
+      const { data: adData, error: adError } = await supabase
+        .from("ads")
+        .select(`
+          id,
+          campaign_id,
+          ad_size,
+          files,
+          campaigns:campaigns (
+            name
+          )
+        `)
+      
+      if (adError) throw adError
+
+      // Transform the data to include campaign_name
+      const transformedAds = adData?.map((ad) => ({
+        ...ad,
+        campaign_name: Array.isArray(ad.campaigns)
+          ? ad.campaigns[0]?.name  // <-- take the first item
+          : (ad.campaigns as { name: string })?.name
+      })) || []
+
+      setAds(transformedAds)
     } catch (error) {
-      console.error("Failed to fetch ads:", error)
+      console.error("Failed to fetch data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch ads and campaigns.",
+        variant: "destructive",
+      })
     }
   }
 
-  const campaigns = ["all", ...Array.from(new Set(ads.map((ad) => ad.campaign_name)))]
+  const filteredAds = selectedCampaignId === "all"
+    ? ads
+    : ads.filter((ad) => ad.campaign_id === selectedCampaignId)
 
-  const filteredAds =
-    selectedCampaign === "all"
-      ? ads
-      : ads.filter((ad) => ad.campaign_name === selectedCampaign)
-
-  // When replay is clicked, increment that ad’s counter.
   const handleReplay = (adId: string) => {
     setReplayCounters((prev) => ({
       ...prev,
@@ -65,20 +102,11 @@ export function AdList({ refreshSignal }: AdListProps) {
     }))
   }
 
-  // Helper: Extract the file path from the public URL.
-  // For example, if the file URL is:
-  // https://<project-ref>.supabase.co/storage/v1/object/public/ad-files/my-campaign/my-image.png
-  // then the file path is: "my-campaign/my-image.png"
-  // A more flexible file path extraction function.
   const extractFilePath = (fileUrl: string): string => {
     try {
-      // Split the URL on "/ad-files/" and take the portion after it.
       const parts = fileUrl.split("/ad-files/")
       if (parts.length > 1) {
-        // This will return, for example, "my-campaign/my-image.png"
         return parts[1]
-      } else {
-        console.error("Could not extract file path from:", fileUrl)
       }
     } catch (error) {
       console.error("Error extracting file path:", error)
@@ -86,34 +114,36 @@ export function AdList({ refreshSignal }: AdListProps) {
     return ""
   }
 
-  // Handle ad deletion using Supabase and update local state.
-  // Now accepts the entire ad so we can access its files.
   const handleDelete = async (ad: Ad) => {
     try {
-      // First, remove files from storage.
+      // Remove files from storage
       for (const fileUrl of ad.files) {
         const filePath = extractFilePath(fileUrl)
-        console.log('File path:', filePath)
         if (filePath) {
           const { error: storageError } = await supabase
             .storage
             .from("ad-files")
             .remove([filePath])
+          
           if (storageError) {
             console.error("Storage delete error:", storageError)
-            // Optionally, you could throw here to stop the deletion process.
           }
         }
       }
-      // Now, remove the ad from the database.
-      const { error: dbError } = await supabase.from("ads").delete().eq("id", ad.id)
+
+      // Remove ad from database
+      const { error: dbError } = await supabase
+        .from("ads")
+        .delete()
+        .eq("id", ad.id)
+
       if (dbError) throw dbError
 
       toast({
         title: "Ad Deleted",
         description: "The ad was deleted successfully.",
       })
-      // Remove the deleted ad from state.
+
       setAds((prevAds) => prevAds.filter((a) => a.id !== ad.id))
     } catch (error) {
       console.error("Delete error:", error)
@@ -125,21 +155,24 @@ export function AdList({ refreshSignal }: AdListProps) {
     }
   }
 
+  console.log('ads', ads)
+
   return (
     <div className="space-y-4">
-      <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+      <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
         <SelectTrigger>
           <SelectValue placeholder="Select Campaign" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="all">All Campaigns</SelectItem>
           {campaigns.map((campaign) => (
-            <SelectItem key={campaign} value={campaign}>
-              {campaign === "all" ? "All Campaigns" : campaign}
+            <SelectItem key={campaign.id} value={campaign.id}>
+              {campaign.name}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      {/* Use an auto-fit grid so the layout is dynamic */}
+
       <div
         className="grid gap-4"
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}
@@ -147,15 +180,13 @@ export function AdList({ refreshSignal }: AdListProps) {
         {filteredAds.map((ad) => (
           <div
             key={ad.id}
-            className="border rounded-lg w-fit p-4 overflow-hidden flex flex-col"
+            className="border rounded-lg  p-4 overflow-hidden flex flex-col"
           >
             <h3 className="text-lg font-semibold">{ad.campaign_name}</h3>
 
-            {/* Wrap the preview in a container that clips any overflow */}
             <div className="mt-4 w-full flex justify-center items-center overflow-hidden">
               {ad.files[1] && (
                 <AdPreview
-                  // Include the replay counter in the key to force a remount on replay.
                   key={`${ad.id}-${replayCounters[ad.id] || 0}`}
                   adFile={ad.files[1]}
                   adSize={ad.ad_size}
