@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -25,7 +25,14 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState<string>("")
   const [isCopied, setIsCopied] = useState(false)
+  const [isChrome, setIsChrome] = useState(false)
   const urlInputRef = useRef<HTMLInputElement>(null)
+
+  // Check if browser is Chrome on component mount
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase()
+    setIsChrome(userAgent.includes('chrome') && !userAgent.includes('safari/'))
+  }, [])
 
   const handleShare = async () => {
     if (!selectedCampaignId) {
@@ -65,8 +72,10 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
       const url = `${window.location.origin}/campaign/${data.share_token}`
       setShareUrl(url)
       
-      // Try to copy immediately after generating
-      copyToClipboard(url)
+      // Only try automatic copy in Chrome
+      if (isChrome) {
+        copyToClipboard(url)
+      }
     } catch (error) {
       console.error("Error sharing campaign:", error)
       toast({
@@ -81,36 +90,17 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
 
   const copyToClipboard = async (text: string) => {
     try {
-      // Try the modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text)
         setIsCopied(true)
         toast({
-          title: "Copied!",
-          description: "Share link copied to clipboard.",
-        })
-        setTimeout(() => setIsCopied(false), 2000)
-        return
-      }
-
-      // Fallback for Safari and other browsers
-      if (urlInputRef.current) {
-        urlInputRef.current.select()
-        document.execCommand('copy')
-        setIsCopied(true)
-        toast({
-          title: "Copied!",
-          description: "Share link copied to clipboard.",
+          title: "Share link copied!",
+          description: "You can now share this link with your client.",
         })
         setTimeout(() => setIsCopied(false), 2000)
       }
     } catch (error) {
       console.error("Clipboard error:", error)
-      toast({
-        title: "Error",
-        description: "Could not copy automatically. Please copy the URL manually.",
-        variant: "destructive",
-      })
     }
   }
 
@@ -201,7 +191,10 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Share this link with your client to let them view the campaign.
+                {isChrome ? 
+                  "Link copied to clipboard! Share it with your client." :
+                  "Click the copy button to copy the share link."
+                }
               </p>
             </div>
           )}
