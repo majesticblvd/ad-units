@@ -19,6 +19,7 @@ import { AdPreview } from "./ad-preview"
 import { RefreshCcw, Share } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { ShareDialogButton } from "./share-button"
+import { motion, AnimatePresence } from "motion/react";
 
 interface Ad {
   id: string
@@ -158,82 +159,132 @@ export function AdList({ refreshSignal }: AdListProps) {
 
   console.log('ads', ads)
 
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: {
+      opacity: 0,
+      y: 20,
+      scale: 0.95
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15
+      }
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.95,
+      transition: {
+        duration: 0.2
+      }
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-
-      <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select Campaign" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Campaigns</SelectItem>
-          {campaigns.map((campaign) => (
-            <SelectItem key={campaign.id} value={campaign.id}>
-              {campaign.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <ShareDialogButton className="ml-auto" campaigns={campaigns} />
+        <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select Campaign" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Campaigns</SelectItem>
+            {campaigns.map((campaign) => (
+              <SelectItem key={campaign.id} value={campaign.id}>
+                {campaign.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <ShareDialogButton className="ml-auto" campaigns={campaigns} />
       </div>
 
-      {/* Ad Display grid */}
-      <div
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
         className="flex gap-4 flex-wrap"
-        // style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}
       >
-        {filteredAds.map((ad) => (
-          <div
-            key={ad.id}
-            className="border rounded-lg flex-grow h-fit p-4 overflow-hidden flex flex-col"
-          >
-            <h3 className="text-lg font-semibold">{ad.campaign_name}</h3>
+        <AnimatePresence mode="popLayout">
+          {filteredAds.map((ad) => (
+            <motion.div
+              key={ad.id}
+              variants={itemVariants}
+              layout
+              exit="exit"
+              className="border rounded-lg flex-grow h-fit p-4 overflow-hidden flex flex-col"
+            >
+              <motion.h3 
+                className="text-lg font-semibold"
+                layout="position"
+              >
+                {ad.campaign_name}
+              </motion.h3>
 
-            <div className="mt-4 w-full flex justify-center items-center overflow-hidden">
-              {ad.files[1] && (
-                <AdPreview
-                  key={`${ad.id}-${replayCounters[ad.id] || 0}`}
-                  adFile={ad.files[1]}
-                  adSize={ad.ad_size}
-                />
-              )}
-            </div>
+              <motion.div 
+                className="mt-4 w-full flex justify-center items-center overflow-hidden"
+                layout
+              >
+                {ad.files[1] && (
+                  <AdPreview
+                    key={`${ad.id}-${replayCounters[ad.id] || 0}`}
+                    adFile={ad.files[1]}
+                    adSize={ad.ad_size}
+                  />
+                )}
+              </motion.div>
 
-            <div className="mt-4 flex w-full justify-between items-center">
-              <p className="rounded-full px-2 py-0 w-fit bg-[#0dab5439] border-[#0DAB53] border">
-                Size: {ad.ad_size}
-              </p>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={() => handleReplay(ad.id)}>
-                  <RefreshCcw size={16} />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your ad and its files.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(ad)}>
+              <motion.div 
+                className="mt-4 flex w-full justify-between items-center"
+                layout="position"
+              >
+                <p className="rounded-full px-2 py-0 w-fit bg-[#0dab5439] border-[#0DAB53] border">
+                  Size: {ad.ad_size}
+                </p>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => handleReplay(ad.id)}>
+                    <RefreshCcw size={16} />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
                         Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your ad and its files.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(ad)}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </motion.div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
     </div>
   )
 }
