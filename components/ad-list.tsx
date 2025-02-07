@@ -186,7 +186,7 @@ export function AdList({ refreshSignal }: AdListProps) {
         {filteredAds.map((ad) => (
           <div
             key={ad.id}
-            className="border rounded-lg flex-grow  p-4 overflow-hidden flex flex-col"
+            className="border rounded-lg flex-grow h-fit p-4 overflow-hidden flex flex-col"
           >
             <h3 className="text-lg font-semibold">{ad.campaign_name}</h3>
 
