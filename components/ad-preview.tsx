@@ -39,7 +39,7 @@ export function AdPreview({ adFile, adSize = "300x250", className = '' }: AdPrev
         iframe.style.height = `${height}px`
         iframe.style.border = 'none'
         iframe.style.overflow = 'hidden'
-        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin')
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation')
         
         // Add loading transition
         iframe.style.opacity = '0'
