@@ -137,7 +137,7 @@ export function AdPreview({ adFile, adSize = "300x250", className = '' }: AdPrev
     <div className="relative">
       <div 
         ref={adContainerRef}
-        className={`bg-white shadow-sm ${className}`}
+        className={`bg-white  ${className}`}
         style={{ 
           width: `${width}px`,
           height: `${height}px`,
@@ -151,7 +151,7 @@ export function AdPreview({ adFile, adSize = "300x250", className = '' }: AdPrev
             height: `${height}px`,
           }}
         >
-          <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2  rounded-full animate-spin" />
         </div>
       )}
     </div>

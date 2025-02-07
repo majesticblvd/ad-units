@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
-import { RefreshCcw, Share } from "lucide-react"
+import { RefreshCcw } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { ShareDialogButton } from "./share-button"
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "framer-motion"
+import MasonryGrid from "./ui/masonry-grid"
 
 interface Ad {
   id: string
@@ -50,7 +51,6 @@ export function AdList({ refreshSignal }: AdListProps) {
 
   const fetchData = async () => {
     try {
-      // Fetch campaigns
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
         .select("id, name")
@@ -59,7 +59,6 @@ export function AdList({ refreshSignal }: AdListProps) {
       if (campaignError) throw campaignError
       setCampaigns(campaignData || [])
 
-      // Fetch ads with campaign information
       const { data: adData, error: adError } = await supabase
         .from("ads")
         .select(`
@@ -74,11 +73,10 @@ export function AdList({ refreshSignal }: AdListProps) {
       
       if (adError) throw adError
 
-      // Transform the data to include campaign_name
       const transformedAds = adData?.map((ad) => ({
         ...ad,
         campaign_name: Array.isArray(ad.campaigns)
-          ? ad.campaigns[0]?.name  // <-- take the first item
+          ? ad.campaigns[0]?.name
           : (ad.campaigns as { name: string })?.name
       })) || []
 
@@ -104,36 +102,15 @@ export function AdList({ refreshSignal }: AdListProps) {
     }))
   }
 
-  const extractFilePath = (fileUrl: string): string => {
-    try {
-      const parts = fileUrl.split("/ad-files/")
-      if (parts.length > 1) {
-        return parts[1]
-      }
-    } catch (error) {
-      console.error("Error extracting file path:", error)
-    }
-    return ""
-  }
-
   const handleDelete = async (ad: Ad) => {
     try {
-      // Remove files from storage
       for (const fileUrl of ad.files) {
-        const filePath = extractFilePath(fileUrl)
+        const filePath = fileUrl.split("/ad-files/")[1]
         if (filePath) {
-          const { error: storageError } = await supabase
-            .storage
-            .from("ad-files")
-            .remove([filePath])
-          
-          if (storageError) {
-            console.error("Storage delete error:", storageError)
-          }
+          await supabase.storage.from("ad-files").remove([filePath])
         }
       }
 
-      // Remove ad from database
       const { error: dbError } = await supabase
         .from("ads")
         .delete()
@@ -157,47 +134,34 @@ export function AdList({ refreshSignal }: AdListProps) {
     }
   }
 
-  console.log('ads', ads)
-
-  const containerVariants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  }
-
   const itemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-      scale: 0.95
-    },
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 15
-      }
+      transition: { type: "spring", stiffness: 100, damping: 15 }
     },
     exit: {
       opacity: 0,
       scale: 0.95,
-      transition: {
-        duration: 0.2
-      }
+      transition: { duration: 0.2 }
     }
   }
 
+  // Calculate dimensions for container based on ad size
+  const getContainerStyle = (adSize: string) => {
+    const [width] = adSize.split('x').map(Number);
+    return {
+      width: (isNaN(width) ? 300 : width + 32) + 'px', // Match MasonryGrid padding
+    };
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex gap-2">
         <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select Campaign" />
           </SelectTrigger>
           <SelectContent>
@@ -209,82 +173,84 @@ export function AdList({ refreshSignal }: AdListProps) {
             ))}
           </SelectContent>
         </Select>
-        <ShareDialogButton className="ml-auto" campaigns={campaigns} />
+        <ShareDialogButton className="ml-auto py-4" campaigns={campaigns} />
       </div>
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="flex gap-4 flex-wrap"
-      >
-        <AnimatePresence mode="popLayout">
-          {filteredAds.map((ad) => (
-            <motion.div
-              key={ad.id}
-              variants={itemVariants}
-              layout
-              exit="exit"
-              className="border rounded-lg flex-grow h-fit p-4 overflow-hidden flex flex-col"
-            >
+      <MasonryGrid items={filteredAds} gutter={16}>
+        {filteredAds.map((ad) => (
+          <motion.div
+            key={ad.id}
+            variants={itemVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-sm"
+            style={getContainerStyle(ad.ad_size)}
+          >
+            <div className="px-4 pt-4">
               <motion.h3 
-                className="text-lg font-semibold"
+                className="text-lg font-semibold mb-4"
                 layout="position"
               >
                 {ad.campaign_name}
               </motion.h3>
+            </div>
 
-              <motion.div 
-                className="mt-4 w-full flex justify-center items-center overflow-hidden"
-                layout
-              >
-                {ad.files[1] && (
-                  <AdPreview
-                    key={`${ad.id}-${replayCounters[ad.id] || 0}`}
-                    adFile={ad.files[1]}
-                    adSize={ad.ad_size}
-                  />
-                )}
-              </motion.div>
-
-              <motion.div 
-                className="mt-4 flex w-full justify-between items-center"
-                layout="position"
-              >
-                <p className="rounded-full px-2 py-0 w-fit bg-[#0dab5439] border-[#0DAB53] border">
-                  Size: {ad.ad_size}
-                </p>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleReplay(ad.id)}>
-                    <RefreshCcw size={16} />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete your ad and its files.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(ad)}>
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </motion.div>
+            <motion.div 
+              className="w-full flex justify-center items-center overflow-hidden"
+              layout
+            >
+              {ad.files[1] && (
+                <AdPreview
+                  key={`${ad.id}-${replayCounters[ad.id] || 0}`}
+                  adFile={ad.files[1]}
+                  adSize={ad.ad_size}
+                />
+              )}
             </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
+
+            <motion.div 
+              className="px-4 py-4 flex w-full justify-between items-center mt-4  border-black"
+              layout="position"
+            >
+              <p className="rounded-full px-3 py-1 text-sm bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
+                {ad.ad_size}
+              </p>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleReplay(ad.id)}
+                  className="hover:bg-gray-100"
+                >
+                  <RefreshCcw size={16} />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your ad and its files.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(ad)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </motion.div>
+          </motion.div>
+        ))}
+      </MasonryGrid>
     </div>
   )
 }
