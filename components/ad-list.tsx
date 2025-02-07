@@ -178,14 +178,15 @@ export function AdList({ refreshSignal }: AdListProps) {
       <ShareDialogButton className="ml-auto" campaigns={campaigns} />
       </div>
 
+      {/* Ad Display grid */}
       <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}
+        className="flex gap-4 flex-wrap"
+        // style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}
       >
         {filteredAds.map((ad) => (
           <div
             key={ad.id}
-            className="border rounded-lg  p-4 overflow-hidden flex flex-col"
+            className="border rounded-lg flex-grow  p-4 overflow-hidden flex flex-col"
           >
             <h3 className="text-lg font-semibold">{ad.campaign_name}</h3>
 
