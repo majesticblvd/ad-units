@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Share, Loader2 } from "lucide-react"
+import { Share, Loader2, Copy, Check } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
+import { Input } from "@/components/ui/input"
 
 interface Campaign {
   id: string
@@ -22,6 +23,9 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
   const [isLoading, setIsLoading] = useState(false)
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string>("")
+  const [isCopied, setIsCopied] = useState(false)
+  const urlInputRef = useRef<HTMLInputElement>(null)
 
   const handleShare = async () => {
     if (!selectedCampaignId) {
@@ -36,7 +40,6 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
     try {
       setIsLoading(true)
       
-      // Fetch the campaign's share token
       const { data, error } = await supabase
         .from("campaigns")
         .select("share_token")
@@ -45,7 +48,6 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
       
       if (error) throw error
       
-      // If no share token exists, create one
       if (!data.share_token) {
         const shareToken = Array.from(crypto.getRandomValues(new Uint8Array(24)))
           .map(b => b.toString(16).padStart(2, '0'))
@@ -60,19 +62,11 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
         data.share_token = shareToken
       }
       
-      // Generate the share URL
-      const shareUrl = `${window.location.origin}/campaign/${data.share_token}`
+      const url = `${window.location.origin}/campaign/${data.share_token}`
+      setShareUrl(url)
       
-      // Copy to clipboard
-      await navigator.clipboard.writeText(shareUrl)
-      
-      toast({
-        title: "Share link copied!",
-        description: "You can now share this link with your client.",
-      })
-      
-      setIsDialogOpen(false)
-      setSelectedCampaignId("")
+      // Try to copy immediately after generating
+      copyToClipboard(url)
     } catch (error) {
       console.error("Error sharing campaign:", error)
       toast({
@@ -85,8 +79,58 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
     }
   }
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Try the modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text)
+        setIsCopied(true)
+        toast({
+          title: "Copied!",
+          description: "Share link copied to clipboard.",
+        })
+        setTimeout(() => setIsCopied(false), 2000)
+        return
+      }
+
+      // Fallback for Safari and other browsers
+      if (urlInputRef.current) {
+        urlInputRef.current.select()
+        document.execCommand('copy')
+        setIsCopied(true)
+        toast({
+          title: "Copied!",
+          description: "Share link copied to clipboard.",
+        })
+        setTimeout(() => setIsCopied(false), 2000)
+      }
+    } catch (error) {
+      console.error("Clipboard error:", error)
+      toast({
+        title: "Error",
+        description: "Could not copy automatically. Please copy the URL manually.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCopy = () => {
+    if (shareUrl) {
+      copyToClipboard(shareUrl)
+    }
+  }
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open)
+    if (!open) {
+      setShareUrl("")
+      setSelectedCampaignId("")
+      setIsCopied(false)
+    }
+  }
+
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -116,23 +160,51 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
               </SelectContent>
             </Select>
           </div>
-          <Button 
-            onClick={handleShare}
-            disabled={isLoading || !selectedCampaignId}
-            className="w-full"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Link...
-              </>
-            ) : (
-              <>
-                <Share className="mr-2 h-4 w-4" />
-                Get Share Link
-              </>
-            )}
-          </Button>
+          
+          {!shareUrl ? (
+            <Button 
+              onClick={handleShare}
+              disabled={isLoading || !selectedCampaignId}
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Link...
+                </>
+              ) : (
+                <>
+                  <Share className="mr-2 h-4 w-4" />
+                  Get Share Link
+                </>
+              )}
+            </Button>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input 
+                  ref={urlInputRef}
+                  value={shareUrl}
+                  readOnly
+                  className="bg-muted"
+                />
+                <Button 
+                  size="icon"
+                  variant="outline"
+                  onClick={handleCopy}
+                >
+                  {isCopied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Share this link with your client to let them view the campaign.
+              </p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
