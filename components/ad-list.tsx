@@ -208,7 +208,7 @@ export function AdList({ refreshSignal }: AdListProps) {
             className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-sm"
             style={getContainerStyle(ad.ad_size)}
           >
-            <div className="px-4  text-dark mb-2 py-2">
+            <div className="px-4 bg-gray-200 m-1 rounded-md text-dark mb-4 py-2">
               <motion.h3 
                 className="text-lg font-semibold"
                 layout="position"
@@ -231,8 +231,8 @@ export function AdList({ refreshSignal }: AdListProps) {
             </motion.div>
 
             {ad.title && (
-              <motion.div className="px-4 pt-3 pb-2">
-                <h4 className="text-lg font-medium text-gray-900">{ad.title}</h4>
+              <motion.div className="px-4 pt-3 pb-1">
+                <h4 className="text-lg font-semibold text-gray-900">{ad.title}</h4>
               </motion.div>
             )}
 
