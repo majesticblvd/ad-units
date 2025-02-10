@@ -68,37 +68,37 @@ export default function Home() {
   return (
     <main className="container w-full max-w-none">
       <div className="header items-center m-1 rounded-lg bg-black  flex justify-between p-6">
-            <div className="flex items-end gap-2">
-              <img className="w-28 h-auto mb-1" src="/svgs/pxl-logo-light.svg" alt="" />
-              {/* <h1 className="text-3xl font-regular text-white">Ads</h1> */}
-            </div>
-            
-            {/* User Account Dropdown */}
-            {userEmail && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 hover:bg-gray-300 duration-100 rounded-full">
-                    <User className="h-5 w-5 text-white" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">Account</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {userEmail}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+        <div className="flex items-end gap-2">
+          <img className="w-28 h-auto" src="/svgs/pxl-logo-light.svg" alt="" />
+          {/* <h1 className="text-3xl font-regular text-white">Ads</h1> */}
+        </div>
+        
+        {/* User Account Dropdown */}
+        {userEmail && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 hover:bg-gray-300 duration-100 rounded-full">
+                <User className="h-5 w-5 text-white" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">Account</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {userEmail}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 m-4 gap-6">
         <div className="flex gap-4 flex-col">
