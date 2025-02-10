@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
+import { Textarea } from "./ui/textarea"
 
 interface Campaign {
   id: string
@@ -41,13 +42,17 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
   const [customWidth, setCustomWidth] = useState("")
   const [customHeight, setCustomHeight] = useState("")
   const [files, setFiles] = useState<FileList | null>(null)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
   const [isNewCampaignDialogOpen, setIsNewCampaignDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
+  // Fetch campaigns on component mount
   useEffect(() => {
     fetchCampaigns()
   }, [])
 
+  // Fetch campaigns from Supabase
   const fetchCampaigns = async () => {
     try {
       const { data, error } = await supabase
@@ -157,7 +162,9 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
         .insert([{
           campaign_id: selectedCampaignId,
           ad_size: finalAdSize,
-          files: fileUrls
+          files: fileUrls,
+          title: title || null,
+          description: description || null
         }])
 
       if (dbError) throw dbError
@@ -173,6 +180,8 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
       setCustomWidth("")
       setCustomHeight("")
       setFiles(null)
+      setTitle("")
+      setDescription("")
       if (e.target instanceof HTMLFormElement) {
         e.target.reset()
       }
@@ -237,6 +246,28 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="title">Ad Title (Optional)</Label>
+        <Input
+          id="title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Enter a title for your ad"
+          className="bg-transparent border-gray-300 shadow-none"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="description">Description (Optional)</Label>
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Describe the animation or add any relevant notes"
+          className="bg-transparent border-gray-300 shadow-none min-h-[100px]"
+        />
       </div>
 
       <div>

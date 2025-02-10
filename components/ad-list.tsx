@@ -26,6 +26,8 @@ interface Ad {
   id: string
   campaign_id: string
   campaign_name: string
+  title?: string
+  description?: string
   ad_size: string
   files: string[]
 }
@@ -64,6 +66,8 @@ export function AdList({ refreshSignal }: AdListProps) {
         .select(`
           id,
           campaign_id,
+          title,
+          description,
           ad_size,
           files,
           campaigns:campaigns (
@@ -157,6 +161,8 @@ export function AdList({ refreshSignal }: AdListProps) {
     };
   };
 
+  console.log('ads', ads)
+
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
@@ -187,9 +193,9 @@ export function AdList({ refreshSignal }: AdListProps) {
             className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-sm"
             style={getContainerStyle(ad.ad_size)}
           >
-            <div className="px-4 pt-4">
+            <div className="px-4  text-dark mb-2 py-2">
               <motion.h3 
-                className="text-lg font-semibold mb-4"
+                className="text-lg font-semibold"
                 layout="position"
               >
                 {ad.campaign_name}
