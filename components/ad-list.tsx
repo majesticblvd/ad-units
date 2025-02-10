@@ -14,9 +14,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
-import { RefreshCcw } from "lucide-react"
+import { RefreshCcw, Info, ChevronUp, ChevronDown } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { ShareDialogButton } from "./share-button"
 import { motion } from "framer-motion"
@@ -46,6 +47,7 @@ export function AdList({ refreshSignal }: AdListProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all")
   const [replayCounters, setReplayCounters] = useState<{ [key: string]: number }>({})
+  const [openDescriptions, setOpenDescriptions] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchData()
@@ -163,6 +165,19 @@ export function AdList({ refreshSignal }: AdListProps) {
 
   console.log('ads', ads)
 
+  // Toggle description visibility
+  const toggleDescription = (adId: string) => {
+    setOpenDescriptions(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(adId)) {
+        newSet.delete(adId)
+      } else {
+        newSet.add(adId)
+      }
+      return newSet
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
@@ -215,8 +230,43 @@ export function AdList({ refreshSignal }: AdListProps) {
               )}
             </motion.div>
 
+            {ad.title && (
+              <motion.div className="px-4 pt-3 pb-2">
+                <h4 className="text-lg font-medium text-gray-900">{ad.title}</h4>
+              </motion.div>
+            )}
+
+            {ad.description && (
+              <Collapsible
+                open={openDescriptions.has(ad.id)}
+                onOpenChange={() => toggleDescription(ad.id)}
+                className="px-4 pb-2"
+              >
+                <div className="flex items-center gap-2">
+                  {/* <Info size={14} className="text-gray-500" /> */}
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="p-0 h-auto hover:bg-transparent">
+                      <span className="text-sm text-gray-500 hover:text-gray-700">
+                        {openDescriptions.has(ad.id) ? 'Hide Details' : 'AD Details'}
+                      </span>
+                      {openDescriptions.has(ad.id) ? (
+                        <ChevronUp className="h-4 w-4 " />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 " />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent className="pt-2">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {ad.description}
+                  </p>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             <motion.div 
-              className="px-4 py-4 flex w-full justify-between items-center mt-4  border-black"
+              className="px-4 py-4 flex w-full justify-between items-center mt-2  border-black"
               layout="position"
             >
               <p className="rounded-full px-3 py-1 text-sm bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
