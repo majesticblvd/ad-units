@@ -197,10 +197,10 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                   className="w-full px-4 flex justify-center items-center overflow-hidden"
                   layout
                 >
-                  {ad.files[1] && (
+                  {ad.files.length > 0 && (
                     <AdPreview
                       key={`${ad.id}-${replayCounters[ad.id] || 0}`}
-                      adFile={ad.files[1]}
+                      adFile={ad.files.find(file => file.toLowerCase().endsWith('.html')) || ad.files[0]}
                       adSize={ad.ad_size}
                     />
                   )}
