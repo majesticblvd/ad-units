@@ -175,7 +175,7 @@ export function AdList({ refreshSignal }: AdListProps) {
   const renderAdCard = (ad: Ad) => (
     <div 
       key={ad.id}
-      className="border border-gray-200 rounded-lg overflow-hidden flex flex-col bg-white shadow-sm"
+      className="border border-gray-200 rounded-lg h-fit overflow-hidden flex flex-col bg-white shadow-sm"
     >
       <div className="w-full flex justify-center items-center overflow-hidden p-2">
         {ad.files && ad.files.length > 0 ? (
