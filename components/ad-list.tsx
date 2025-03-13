@@ -17,11 +17,9 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
-import { RefreshCcw, Info, ChevronUp, ChevronDown } from "lucide-react"
+import { RefreshCcw, ChevronUp, ChevronDown, ChevronRight } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { ShareDialogButton } from "./share-button"
-import { motion } from "framer-motion"
-import MasonryGrid from "./ui/masonry-grid"
 
 interface Ad {
   id: string
@@ -97,9 +95,29 @@ export function AdList({ refreshSignal }: AdListProps) {
     }
   }
 
+  // Filter ads based on selected campaign
   const filteredAds = selectedCampaignId === "all"
     ? ads
     : ads.filter((ad) => ad.campaign_id === selectedCampaignId)
+
+  // Group ads by campaign
+  const groupedAdsByCampaign = () => {
+    if (selectedCampaignId !== "all") {
+      // If a specific campaign is selected, just return those ads
+      const campaign = campaigns.find(c => c.id === selectedCampaignId)
+      return campaign 
+        ? [{ campaign, ads: filteredAds }] 
+        : []
+    }
+
+    // Group all ads by campaign
+    return campaigns
+      .map(campaign => ({
+        campaign,
+        ads: ads.filter(ad => ad.campaign_id === campaign.id)
+      }))
+      .filter(group => group.ads.length > 0)
+  }
 
   const handleReplay = (adId: string) => {
     setReplayCounters((prev) => ({
@@ -140,31 +158,6 @@ export function AdList({ refreshSignal }: AdListProps) {
     }
   }
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { type: "spring", stiffness: 100, damping: 15 }
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.95,
-      transition: { duration: 0.2 }
-    }
-  }
-
-  // Calculate dimensions for container based on ad size
-  const getContainerStyle = (adSize: string) => {
-    const [width] = adSize.split('x').map(Number);
-    return {
-      width: (isNaN(width) ? 300 : width + 32) + 'px', // Match MasonryGrid padding
-    };
-  };
-
-  console.log('ads', ads)
-
   // Toggle description visibility
   const toggleDescription = (adId: string) => {
     setOpenDescriptions(prev => {
@@ -177,6 +170,101 @@ export function AdList({ refreshSignal }: AdListProps) {
       return newSet
     })
   }
+
+  // Render an individual ad card
+  const renderAdCard = (ad: Ad) => (
+    <div 
+      key={ad.id}
+      className="border border-gray-200 rounded-lg overflow-hidden flex flex-col bg-white shadow-sm"
+    >
+      <div className="w-full flex justify-center items-center overflow-hidden p-2">
+        {ad.files && ad.files.length > 0 ? (
+          <AdPreview
+            key={`${ad.id}-${replayCounters[ad.id] || 0}`}
+            adFile={ad.files.find(file => file.toLowerCase().endsWith('.html')) || ad.files[0]}
+            adSize={ad.ad_size}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-32 w-full bg-gray-100 text-gray-400 text-sm">
+            No preview available
+          </div>
+        )}
+      </div>
+
+      {ad.title && (
+        <div className="px-4 pt-2">
+          <h4 className="text-base font-semibold text-gray-900">{ad.title}</h4>
+        </div>
+      )}
+
+      {ad.description && (
+        <Collapsible
+          open={openDescriptions.has(ad.id)}
+          onOpenChange={() => toggleDescription(ad.id)}
+          className="px-4"
+        >
+          <div className="flex items-center gap-1">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="p-0 h-auto hover:bg-transparent">
+                <span className="text-xs text-gray-500 hover:text-gray-700">
+                  {openDescriptions.has(ad.id) ? 'Hide Details' : 'AD Details'}
+                </span>
+                {openDescriptions.has(ad.id) ? (
+                  <ChevronUp className="h-3 w-3 ml-1" />
+                ) : (
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="pt-2">
+            <p className="text-xs text-gray-600 whitespace-pre-wrap">
+              {ad.description}
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      <div className="px-4 py-3 mt-auto flex w-full justify-between items-center">
+        <p className="rounded-full px-2 py-1 text-xs bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
+          {ad.ad_size}
+        </p>
+        <div className="flex space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleReplay(ad.id)}
+            className="hover:bg-gray-100 p-1 h-8"
+          >
+            <RefreshCcw size={14} />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" className="h-8 text-xs px-2">
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete your ad and its files.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleDelete(ad)}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+    </div>
+  )
+
+  const groupedCampaignAds = groupedAdsByCampaign()
 
   return (
     <div className="space-y-6">
@@ -197,116 +285,32 @@ export function AdList({ refreshSignal }: AdListProps) {
         <ShareDialogButton className="ml-auto py-4" campaigns={campaigns} />
       </div>
 
-      <MasonryGrid items={filteredAds} gutter={16}>
-        {filteredAds.map((ad) => (
-          <motion.div
-            key={ad.id}
-            variants={itemVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-sm"
-            style={getContainerStyle(ad.ad_size)}
-          >
-            <div className="px-4 bg-gray-200 m-1 rounded-md text-dark mb-6 py-2">
-              <motion.h3 
-                className="text-lg font-semibold"
-                layout="position"
-              >
-                {ad.campaign_name}
-              </motion.h3>
-            </div>
-
-            <motion.div 
-              className="w-full flex justify-center items-center overflow-hidden"
-              layout
-            >
-              {ad.files.length > 0 && (
-                <AdPreview
-                  key={`${ad.id}-${replayCounters[ad.id] || 0}`}
-                  adFile={ad.files.find(file => file.toLowerCase().endsWith('.html')) || ad.files[0]}
-                  adSize={ad.ad_size}
-                />
-              )}
-            </motion.div>
-
-            {ad.title && (
-              <motion.div className="px-4 pt-2 pb-1">
-                <h4 className="text-lg font-semibold text-gray-900">{ad.title}</h4>
-              </motion.div>
-            )}
-
-            {ad.description && (
-              <Collapsible
-                open={openDescriptions.has(ad.id)}
-                onOpenChange={() => toggleDescription(ad.id)}
-                className="px-4 pb-2"
-              >
-                <div className="flex items-center gap-2">
-                  {/* <Info size={14} className="text-gray-500" /> */}
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="p-0 h-auto hover:bg-transparent">
-                      <span className="text-sm text-gray-500 hover:text-gray-700">
-                        {openDescriptions.has(ad.id) ? 'Hide Details' : 'AD Details'}
-                      </span>
-                      {openDescriptions.has(ad.id) ? (
-                        <ChevronUp className="h-4 w-4 " />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 " />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                </div>
-                <CollapsibleContent className="pt-2">
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {ad.description}
-                  </p>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-
-            <motion.div 
-              className="px-4 py-4 flex w-full justify-between items-center mt-2  border-black"
-              layout="position"
-            >
-              <p className="rounded-full px-3 py-1 text-sm bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
-                {ad.ad_size}
-              </p>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => handleReplay(ad.id)}
-                  className="hover:bg-gray-100"
-                >
-                  <RefreshCcw size={16} />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your ad and its files.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(ad)}>
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+      {groupedCampaignAds.length > 0 ? (
+        <div className="space-y-10">
+          {groupedCampaignAds.map(({ campaign, ads }) => (
+            <div key={campaign.id} className="space-y-4">
+              {/* Campaign header with count of ads */}
+              <div className="border-b border-gray-300 pb-2">
+                <h2 className="text-xl font-bold">
+                  {campaign.name}
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    ({ads.length} {ads.length === 1 ? 'ad' : 'ads'})
+                  </span>
+                </h2>
               </div>
-            </motion.div>
-          </motion.div>
-        ))}
-      </MasonryGrid>
+              
+              {/* Grid of ads for this campaign */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {ads.map(ad => renderAdCard(ad))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-10 text-gray-500">
+          No ads found. Try uploading some ads first.
+        </div>
+      )}
     </div>
   )
 }

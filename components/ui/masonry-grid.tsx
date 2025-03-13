@@ -21,7 +21,7 @@ interface ItemDimensions {
 const MasonryGrid: React.FC<MasonryGridProps> = ({ 
   children, 
   items, 
-  gutter = 16 
+  gutter = 10 
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState<ReactNode[][]>([]);
@@ -36,6 +36,7 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
     };
   };
 
+  // Set up ResizeObserver to handle container resizing
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
       for (const entry of entries) {
@@ -50,6 +51,7 @@ const MasonryGrid: React.FC<MasonryGridProps> = ({
     return () => resizeObserver.disconnect();
   }, []);
 
+  // Calculate columns based on container width and item dimensions
   useEffect(() => {
     if (!containerWidth || !items.length) return;
 
