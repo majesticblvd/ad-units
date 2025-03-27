@@ -17,9 +17,10 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
-import { RefreshCcw, ChevronUp, ChevronDown, ChevronRight } from "lucide-react"
+import { RefreshCcw, ChevronUp, ChevronDown, FolderSymlink } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { ShareDialogButton } from "./share-button"
+import { EditCampaignButton } from "./edit-campaign-button"
 
 interface Ad {
   id: string
@@ -226,9 +227,15 @@ export function AdList({ refreshSignal }: AdListProps) {
       )}
 
       <div className="px-4 py-3 mt-auto flex w-full justify-between items-center">
-        <p className="rounded-full px-2 py-1 text-xs bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
-          {ad.ad_size}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="rounded-full px-2 py-1 text-xs bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
+            {ad.ad_size}
+          </p>
+          {/* <div className="text-xs text-gray-500 flex items-center">
+            <FolderSymlink className="h-3 w-3 mr-1" />
+            {ad.campaign_name}
+          </div> */}
+        </div>
         <div className="flex space-x-2">
           <Button 
             variant="ghost" 
@@ -238,6 +245,13 @@ export function AdList({ refreshSignal }: AdListProps) {
           >
             <RefreshCcw size={14} />
           </Button>
+          <EditCampaignButton 
+            adId={ad.id}
+            currentCampaignId={ad.campaign_id}
+            campaigns={campaigns}
+            onUpdate={fetchData}
+            size="sm"
+          />
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" className="h-8 text-xs px-2">

@@ -10,6 +10,7 @@ export function AdPreview({ adFile, adSize = "300x250", className = '' }: AdPrev
   const adContainerRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
   
   // Add validation for adSize
   const [width, height] = (adSize || "300x250").split('x').map(dim => {

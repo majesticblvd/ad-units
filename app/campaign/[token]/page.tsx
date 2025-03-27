@@ -15,6 +15,7 @@ interface CampaignAd {
   id: string
   ad_size: string
   files: string[]
+  title: string
 }
 
 interface CampaignData {
@@ -41,7 +42,8 @@ export default function CampaignSharePage({ params }: { params: { token: string 
             ads (
               id,
               ad_size,
-              files
+              files,
+              title
             )
           `)
           .eq("share_token", params.token)
@@ -116,6 +118,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
 
   const filteredAds = campaign.ads.filter(ad => selectedSizes.has(ad.ad_size))
 
+
   const itemVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
     visible: {
@@ -189,7 +192,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                     className="text-lg font-semibold mb-4"
                     layout="position"
                   >
-                    {campaign.name}
+                    {ad.title || campaign.name}
                   </motion.h3>
                 </div>
 
