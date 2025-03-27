@@ -128,7 +128,7 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
           className={className}
         >
           <Share className="h-4 w-4" />
-          <span className="ml-2">Share Campaign</span>
+          <span className="ml-2">Campaign Share Link</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
