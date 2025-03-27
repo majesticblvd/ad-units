@@ -157,15 +157,31 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
         fileUrls.push(publicUrlData.publicUrl)
       }
 
+      const { data: highestPositionData, error: positionError } = await supabase
+      .from("ads")
+      .select("position")
+      .eq("campaign_id", selectedCampaignId)
+      .order("position", { ascending: false })
+      .limit(1)
+
+      if (positionError) throw positionError
+
+      const newPosition = (highestPositionData && highestPositionData.length > 0 && 
+                        highestPositionData[0]?.position) 
+                        ? (highestPositionData[0].position + 1) 
+                        : 1
+
+      // Then include it in your insert
       const { error: dbError } = await supabase
-        .from("ads")
-        .insert([{
-          campaign_id: selectedCampaignId,
-          ad_size: finalAdSize,
-          files: fileUrls,
-          title: title || null,
-          description: description || null
-        }])
+      .from("ads")
+      .insert([{
+        campaign_id: selectedCampaignId,
+        ad_size: finalAdSize,
+        files: fileUrls,
+        title: title || null,
+        description: description || null,
+        position: newPosition // Add this line
+      }])
 
       if (dbError) throw dbError
 
@@ -312,6 +328,8 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
           </div>
         )}
       </div>
+
+      
 
       <div>
         <Label htmlFor="files">Ad Files</Label>

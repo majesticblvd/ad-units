@@ -136,13 +136,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
 
   return (
     <main className="container w-full max-w-none">
-      {/* <div className="header items-center m-1 rounded-lg bg-black flex justify-between p-6">
-        <div className="flex items-end gap-2">
-          <img className="w-28 h-auto" src="/svgs/pxl-logo-light.svg" alt="" />
-        </div>
-      </div> */}
-
-      <div className="grid grid-cols-1 md:grid-cols-4 m-4 gap-6">
+      <div className="grid bg-gray-50 grid-cols-1 md:grid-cols-4 p-4 gap-6">
         <div className="flex gap-4 flex-col">
           <div className="bg-black text-white min-h-fit max-h-fit h-fit sticky top-4 px-4 py-4 rounded-lg col-span-1">
             <h2 className="text-4xl font-semibold mb-6">{campaign.name}</h2>
@@ -185,7 +179,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-sm"
+                className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-md"
               >
                 <div className="px-4 pt-4">
                   <motion.h3 

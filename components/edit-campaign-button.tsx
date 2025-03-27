@@ -70,13 +70,33 @@ export function EditCampaignButton({
       setIsOpen(false)
       return
     }
-
+  
     try {
       setIsLoading(true)
       
+      // Get the highest position in the target campaign
+      const { data: highestPositionData, error: positionError } = await supabase
+        .from("ads")
+        .select("position")
+        .eq("campaign_id", selectedCampaignId)
+        .order("position", { ascending: false })
+        .limit(1)
+      
+      if (positionError) throw positionError
+      
+      // Calculate new position (either 1 if no ads, or highest + 1)
+      const newPosition = (highestPositionData && highestPositionData.length > 0 && 
+                           highestPositionData[0]?.position) 
+                           ? (highestPositionData[0].position + 1) 
+                           : 1
+      
+      // Update the ad with new campaign and position
       const { error } = await supabase
         .from("ads")
-        .update({ campaign_id: selectedCampaignId })
+        .update({ 
+          campaign_id: selectedCampaignId,
+          position: newPosition 
+        })
         .eq("id", adId)
       
       if (error) throw error
