@@ -16,6 +16,7 @@ interface CampaignAd {
   ad_size: string
   files: string[]
   title: string
+  position?: number
 }
 
 interface CampaignData {
@@ -43,7 +44,8 @@ export default function CampaignSharePage({ params }: { params: { token: string 
               id,
               ad_size,
               files,
-              title
+              title,
+              position
             )
           `)
           .eq("share_token", params.token)
@@ -116,7 +118,10 @@ export default function CampaignSharePage({ params }: { params: { token: string 
     )
   }
 
-  const filteredAds = campaign.ads.filter(ad => selectedSizes.has(ad.ad_size))
+  // filter ads by size and sort by position
+  const filteredAds = campaign.ads
+  .filter(ad => selectedSizes.has(ad.ad_size))
+  .sort((a, b) => (a.position || 0) - (b.position || 0)); // Sort by position
 
 
   const itemVariants = {
