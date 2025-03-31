@@ -379,10 +379,10 @@ export function AdList({ refreshSignal }: AdListProps) {
           <p className="rounded-full px-2 py-1 text-xs bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
             {ad.ad_size}
           </p>
-          <div className="text-xs text-gray-500 flex items-center">
+          {/* <div className="text-xs text-gray-500 flex items-center">
             <FolderSymlink className="h-3 w-3 mr-1" />
             {ad.campaign_name}
-          </div>
+          </div> */}
         </div>
         <div className="flex space-x-2">
           <Button 
