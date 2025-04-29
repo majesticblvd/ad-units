@@ -1,0 +1,15 @@
+name: Keep Supabase Project Alive
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # Every day at 9:00 UTC
+  workflow_dispatch:      # Allow manual trigger from Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Supabase Health Endpoint
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" "https://dqfyagxejrhrgsoqyscg.supabase.co/rest/v1/health?apikey=${{ secrets.SUPABASE_ANON_KEY }}"
