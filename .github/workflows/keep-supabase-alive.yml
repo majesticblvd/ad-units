@@ -2,7 +2,7 @@ name: Keep Supabase Project Alive
 
 on:
   schedule:
-    - cron: '0 9 * * *'   # Every day at 9:00 UTC
+    - cron: '0 9 * * 1,4' # Every Monday and Thursday at 9:00 UTC
   workflow_dispatch:      # Allow manual trigger from Actions tab
 
 jobs:
