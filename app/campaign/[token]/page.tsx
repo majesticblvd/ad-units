@@ -5,10 +5,10 @@ import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { AdPreview } from "@/components/ad-preview"
 import { Card } from "@/components/ui/card"
-import { RefreshCcw } from "lucide-react"
+import { RefreshCcw, MessageSquare, X } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import MasonryGrid from "@/components/ui/masonry-grid"
 
 interface CampaignAd {
@@ -31,6 +31,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [replayCounters, setReplayCounters] = useState<{ [key: string]: number }>({})
+  const [isCommentSidebarOpen, setIsCommentSidebarOpen] = useState(false)
 
   useEffect(() => {
     const fetchCampaign = async () => {
@@ -99,6 +100,10 @@ export default function CampaignSharePage({ params }: { params: { token: string 
     setSelectedSizes(new Set())
   }
 
+  const toggleCommentSidebar = () => {
+    setIsCommentSidebarOpen(prev => !prev)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -120,9 +125,8 @@ export default function CampaignSharePage({ params }: { params: { token: string 
 
   // filter ads by size and sort by position
   const filteredAds = campaign.ads
-  .filter(ad => selectedSizes.has(ad.ad_size))
-  .sort((a, b) => (a.position || 0) - (b.position || 0)); // Sort by position
-
+    .filter(ad => selectedSizes.has(ad.ad_size))
+    .sort((a, b) => (a.position || 0) - (b.position || 0)); // Sort by position
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
@@ -139,10 +143,29 @@ export default function CampaignSharePage({ params }: { params: { token: string 
     }
   }
 
+  const sidebarVariants = {
+    open: { 
+      x: 0,
+      width: "300px",
+      transition: { type: "spring", stiffness: 300, damping: 30 }
+    },
+    closed: { 
+      x: 20,
+      width: 0,
+      transition: { type: "spring", stiffness: 300, damping: 30 }
+    }
+  }
+
+  const buttonVariants = {
+    open: { x: 0 },
+    closed: { x: 0 }
+  }
+
   return (
-    <main className="container w-full max-w-none">
+    <main className="container w-full max-w-none relative">
       <div className="grid bg-gray-50 grid-cols-1 md:grid-cols-4 p-4 gap-6">
         <div className="flex gap-4 flex-col">
+          {/* Left sidebar */}
           <div className="bg-black text-white min-h-fit max-h-fit h-fit sticky top-4 px-4 py-4 rounded-lg col-span-1">
             <h2 className="text-4xl font-semibold mb-6">{campaign.name}</h2>
             
@@ -175,7 +198,19 @@ export default function CampaignSharePage({ params }: { params: { token: string 
         </div>
 
         <div className="col-span-3">
-          <h2 className="text-2xl font-semibold mb-4">Campaign Ads</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Campaign Ads</h2>
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={toggleCommentSidebar}
+              className="flex items-center gap-1"
+            >
+              <MessageSquare size={18} />
+              {!isCommentSidebarOpen ? "Show Comments" : "Hide Comments"}
+            </Button>
+          </div>
+
           <MasonryGrid items={filteredAds} gutter={16}>
             {filteredAds.map((ad) => (
               <motion.div
@@ -229,6 +264,33 @@ export default function CampaignSharePage({ params }: { params: { token: string 
           </MasonryGrid>
         </div>
       </div>
+
+      {/* Comments Sidebar */}
+      <AnimatePresence>
+        {isCommentSidebarOpen && (
+          <motion.div
+            initial="closed"
+            animate="open"
+            exit="closed"
+            variants={sidebarVariants}
+            className="fixed right-0 top-0 h-full bg-white border-l border-gray-200 shadow-lg z-50 overflow-hidden"
+          >
+            <div className="p-4 h-full flex flex-col">
+              <div className="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 className="text-xl font-semibold">Comments</h2>
+                <Button variant="ghost" size="sm" onClick={toggleCommentSidebar} className="rounded-full p-1 h-8 w-8">
+                  <X size={18} />
+                </Button>
+              </div>
+              
+              <div className="flex-grow overflow-y-auto">
+                <p className="text-gray-500 text-sm">No comments yet for this campaign.</p>
+                {/* Add comment listing and forms here */}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
