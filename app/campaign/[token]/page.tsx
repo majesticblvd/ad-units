@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { AdPreview } from "@/components/ad-preview"
 import { Card } from "@/components/ui/card"
-import { RefreshCcw, MessageSquare, X } from "lucide-react"
+import { RefreshCcw, MessageSquare, X, ArrowLeft } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
@@ -31,6 +31,7 @@ interface Comment {
   text: string
   author: string
   createdAt: Date
+  adId?: string // Optional adId to identify if this is an ad-specific comment
 }
 
 export default function CampaignSharePage({ params }: { params: { token: string } }) {
@@ -44,7 +45,8 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
-
+  const [selectedAdId, setSelectedAdId] = useState<string | null>(null)
+  
   useEffect(() => {
     const fetchCampaign = async () => {
       try {
@@ -83,6 +85,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
     }
 
     const loadComments = () => {
+      // Mock comments - some for campaign, some for specific ads
       const mockComments: Comment[] = [
         {
           id: "1",
@@ -95,6 +98,27 @@ export default function CampaignSharePage({ params }: { params: { token: string 
           text: "The animation looks great! Let's proceed with this version.",
           author: "John Doe",
           createdAt: new Date(Date.now() - 172800000) // 2 days ago
+        },
+        {
+          id: "3",
+          text: "This ad needs a stronger headline.",
+          author: "Alice Johnson",
+          createdAt: new Date(Date.now() - 50000000),
+          adId: "ad1" // This is a mock ID that needs to match one of your actual ad IDs
+        },
+        {
+          id: "4",
+          text: "The colors on this ad look great!",
+          author: "Bob Wilson",
+          createdAt: new Date(Date.now() - 60000000),
+          adId: "ad2" // Another mock ID
+        },
+        {
+          id: "5",
+          text: "Can we adjust the logo size?",
+          author: "Chris Martin",
+          createdAt: new Date(Date.now() - 70000000),
+          adId: "ad1" // Same ad as comment 3
         }
       ]
       setComments(mockComments)
@@ -114,13 +138,42 @@ export default function CampaignSharePage({ params }: { params: { token: string 
         id: `comment-${Date.now()}`,
         text: newComment,
         author: "You",
-        createdAt: new Date()
+        createdAt: new Date(),
+        adId: selectedAdId // Include the selected ad ID if we're commenting on a specific ad
       }
       
       setComments(prevComments => [newCommentObj, ...prevComments])
       setNewComment("")
       setIsSubmittingComment(false)
     }, 500)
+  }
+
+  // Function to filter comments based on selected ad
+  const getFilteredComments = () => {
+    if (!selectedAdId) {
+      // If no ad is selected, show only campaign-level comments (those without adId)
+      return comments.filter(comment => !comment.adId);
+    } else {
+      // If an ad is selected, show comments for that specific ad
+      return comments.filter(comment => comment.adId === selectedAdId);
+    }
+  }
+
+  // Function to count comments for a specific ad
+  const getCommentCountForAd = (adId: string) => {
+    return comments.filter(comment => comment.adId === adId).length;
+  }
+
+  // Function to open sidebar with ad-specific comments
+  const openAdComments = (adId: string) => {
+    setSelectedAdId(adId)
+    setIsCommentSidebarOpen(true)
+  }
+
+  // Function to show general campaign comments
+  const showCampaignComments = () => {
+    setSelectedAdId(null)
+    setIsCommentSidebarOpen(true)
   }
 
   const handleReplay = (adId: string) => {
@@ -151,7 +204,13 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   }
 
   const toggleCommentSidebar = () => {
-    setIsCommentSidebarOpen(prev => !prev)
+    if (isCommentSidebarOpen) {
+      setIsCommentSidebarOpen(false)
+      // Optional: Reset to campaign comments when closing
+      // setSelectedAdId(null)
+    } else {
+      setIsCommentSidebarOpen(true)
+    }
   }
 
   if (isLoading) {
@@ -176,7 +235,17 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   // filter ads by size and sort by position
   const filteredAds = campaign.ads
     .filter(ad => selectedSizes.has(ad.ad_size))
-    .sort((a, b) => (a.position || 0) - (b.position || 0)); // Sort by position
+    .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+  // For better test visualization, assign mock comment IDs to real ads
+  // This maps our mock comment adIds to actual adIds from the campaign
+  const adIdMap: Record<string, string> = {}
+  if (campaign && campaign.ads.length > 0) {
+    adIdMap["ad1"] = campaign.ads[0].id
+    if (campaign.ads.length > 1) {
+      adIdMap["ad2"] = campaign.ads[1].id
+    }
+  }
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
@@ -253,64 +322,81 @@ export default function CampaignSharePage({ params }: { params: { token: string 
             <Button 
               variant="outline"
               size="sm"
-              onClick={toggleCommentSidebar}
+              onClick={showCampaignComments}
               className="flex items-center gap-1"
             >
               <MessageSquare size={18} />
-              {!isCommentSidebarOpen ? "Show Comments" : "Hide Comments"}
+              Campaign Comments
             </Button>
           </div>
 
           <MasonryGrid items={filteredAds} gutter={16}>
-            {filteredAds.map((ad) => (
-              <motion.div
-                key={ad.id}
-                variants={itemVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-md"
-              >
-                <div className="px-4 pt-4">
-                  <motion.h3 
-                    className="text-lg font-semibold mb-4"
+            {filteredAds.map((ad) => {
+              // Find comments for this ad, handling the mock -> real ID mapping
+              const commentCount = getCommentCountForAd(ad.id) + 
+                getCommentCountForAd(Object.entries(adIdMap).find(([mockId, realId]) => realId === ad.id)?.[0] || "");
+              
+              return (
+                <motion.div
+                  key={ad.id}
+                  variants={itemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="border border-gray-400 rounded-lg overflow-hidden flex flex-col bg-white shadow-md"
+                >
+                  <div className="px-4 pt-4">
+                    <motion.h3 
+                      className="text-lg font-semibold mb-4"
+                      layout="position"
+                    >
+                      {ad.title || campaign.name}
+                    </motion.h3>
+                  </div>
+
+                  <motion.div 
+                    className="w-full px-4 flex justify-center items-center overflow-hidden"
+                    layout
+                  >
+                    {ad.files.length > 0 && (
+                      <AdPreview
+                        key={`${ad.id}-${replayCounters[ad.id] || 0}`}
+                        adFile={ad.files.find(file => file.toLowerCase().endsWith('.html')) || ad.files[0]}
+                        adSize={ad.ad_size}
+                      />
+                    )}
+                  </motion.div>
+
+                  <motion.div 
+                    className="px-4 py-4 flex w-full justify-between items-center mt-4"
                     layout="position"
                   >
-                    {ad.title || campaign.name}
-                  </motion.h3>
-                </div>
-
-                <motion.div 
-                  className="w-full px-4 flex justify-center items-center overflow-hidden"
-                  layout
-                >
-                  {ad.files.length > 0 && (
-                    <AdPreview
-                      key={`${ad.id}-${replayCounters[ad.id] || 0}`}
-                      adFile={ad.files.find(file => file.toLowerCase().endsWith('.html')) || ad.files[0]}
-                      adSize={ad.ad_size}
-                    />
-                  )}
+                    <div className="flex items-center gap-2">
+                      <p className="rounded-full px-3 py-1 text-sm bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
+                        {ad.ad_size}
+                      </p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => openAdComments(ad.id)}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        <MessageSquare size={14} />
+                        {commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'}
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleReplay(ad.id)}
+                      className="hover:bg-gray-100"
+                    >
+                      <RefreshCcw size={16} />
+                    </Button>
+                  </motion.div>
                 </motion.div>
-
-                <motion.div 
-                  className="px-4 py-4 flex w-full justify-between items-center mt-4"
-                  layout="position"
-                >
-                  <p className="rounded-full px-3 py-1 text-sm bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
-                    {ad.ad_size}
-                  </p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleReplay(ad.id)}
-                    className="hover:bg-gray-100"
-                  >
-                    <RefreshCcw size={16} />
-                  </Button>
-                </motion.div>
-              </motion.div>
-            ))}
+              )
+            })}
           </MasonryGrid>
         </div>
       </div>
@@ -327,18 +413,24 @@ export default function CampaignSharePage({ params }: { params: { token: string 
           >
             <div className="p-4 h-full flex flex-col">
               <div className="flex justify-between items-center border-b pb-3 mb-4">
-                <h2 className="text-xl font-semibold">Comments</h2>
+                <div className="flex items-center">
+                  <h2 className="text-xl font-semibold">
+                    {selectedAdId ? 'Ad Comments' : 'Campaign Comments'}
+                  </h2>
+                </div>
                 <Button variant="ghost" size="sm" onClick={toggleCommentSidebar} className="rounded-full p-1 h-8 w-8">
                   <X size={18} />
                 </Button>
               </div>
               
               <div className="flex-grow overflow-y-auto mb-4">
-                {comments.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No comments yet for this campaign.</p>
+                {getFilteredComments().length === 0 ? (
+                  <p className="text-gray-500 text-sm">
+                    {selectedAdId ? 'No comments yet for this ad.' : 'No comments yet for this campaign.'}
+                  </p>
                 ) : (
                   <div className="space-y-4">
-                    {comments.map((comment) => (
+                    {getFilteredComments().map((comment) => (
                       <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between mb-1">
                           <p className="font-medium text-sm">{comment.author}</p>
@@ -359,7 +451,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                   submitComment();
                 }} className="flex flex-col gap-2">
                   <Textarea 
-                    placeholder="Add your comment..." 
+                    placeholder={selectedAdId ? "Comment on this ad..." : "Comment on this campaign..."}
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     className="resize-none min-h-[80px]"
