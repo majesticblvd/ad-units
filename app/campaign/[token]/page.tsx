@@ -261,6 +261,13 @@ export default function CampaignSharePage({ params }: { params: { token: string 
     }
   }
 
+  // Get the title of a specific ad
+  const getAdTitle = (adId: string | null) => {
+    if (!adId || !campaign) return "";
+    const ad = campaign.ads.find(ad => ad.id === adId);
+    return ad ? (ad.title || campaign.name) : "";
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -461,10 +468,17 @@ export default function CampaignSharePage({ params }: { params: { token: string 
           >
             <div className="p-4 h-full flex flex-col">
               <div className="flex justify-between items-center border-b pb-3 mb-4">
-                <div className="flex items-center">
-                  <h2 className="text-xl font-semibold">
-                    {selectedAdId ? 'Ad Comments' : 'Campaign Comments'}
+                <div className="flex flex-col">
+                  <h2 className="text-xl font-semibold flex items-center">
+                    {selectedAdId 
+                      ? `Ad Comments ${getFilteredComments().length > 0 ? `(${getFilteredComments().length})` : ''}` 
+                      : `Campaign Comments ${getCampaignCommentCount() > 0 ? `(${getCampaignCommentCount()})` : ''}`}
                   </h2>
+                  {selectedAdId && (
+                    <p className="text-gray-500 text-sm mt-1">
+                      {getAdTitle(selectedAdId)}
+                    </p>
+                  )}
                 </div>
                 <Button variant="ghost" size="sm" onClick={toggleCommentSidebar} className="rounded-full p-1 h-8 w-8">
                   <X size={18} />
@@ -502,7 +516,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                     <Label htmlFor="authorName">Your Name</Label>
                     <Input 
                       id="authorName"
-                      placeholder="Anonymous"
+                      placeholder=""
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
                       disabled={isSubmittingComment}
@@ -514,7 +528,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                     </Label>
                     <Textarea 
                       id="commentText"
-                      placeholder={selectedAdId ? "Comment on ad..." : "Comment on campaign..."}
+                      placeholder=""
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       className="resize-none min-h-[80px]"
