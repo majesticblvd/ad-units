@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import MasonryGrid from "@/components/ui/masonry-grid"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
-// import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
 import { Input } from "@/components/ui/input"
 
@@ -106,11 +106,11 @@ export default function CampaignSharePage({ params }: { params: { token: string 
       
       if (error) {
         console.error("Error fetching comments:", error)
-        // toast({
-        //   title: "Failed to load comments",
-        //   description: "There was a problem loading comments. Please try refreshing the page.",
-        //   variant: "destructive"
-        // })
+        toast({
+          title: "Failed to load comments",
+          description: "There was a problem loading comments. Please try refreshing the page.",
+          variant: "destructive"
+        })
         return
       }
       
@@ -126,11 +126,11 @@ export default function CampaignSharePage({ params }: { params: { token: string 
       setComments(transformedComments)
     } catch (err) {
       console.error("Error processing comments:", err)
-      // toast({
-      //   title: "Failed to load comments",
-      //   description: "Unexpected error while loading comments.",
-      //   variant: "destructive"
-      // })
+      toast({
+        title: "Failed to load comments",
+        description: "Unexpected error while loading comments.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -146,7 +146,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
         comment: newComment,
         ad_id: selectedAdId || null, // null for campaign-level comments
         created_at: new Date().toISOString(),
-        author: authorName ? authorName.trim() : null // Use entered name or default to "Anonymous"
+        author: authorName ? authorName.trim() : "Anonymous" // Use entered name or default to "Anonymous"
       }
 
       // Insert the new comment into Supabase
@@ -163,7 +163,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
       const newCommentObj: Comment = {
         id: data[0].id,
         text: data[0].comment,
-        author: data[0].author || authorName.trim(),
+        author: data[0].author || authorName.trim() || "Anonymous",
         createdAt: new Date(data[0].created_at),
         adId: data[0].ad_id || undefined
       }
@@ -173,19 +173,19 @@ export default function CampaignSharePage({ params }: { params: { token: string 
       setNewComment("")
       setAuthorName("")
       
-      // toast({
-      //   title: "Comment added",
-      //   description: "Your comment was successfully posted.",
-      //   variant: "default"
-      // })
+      toast({
+        title: "Comment added",
+        description: "Your comment was posted.",
+        variant: "default"
+      })
     } catch (err) {
       console.error("Error submitting comment:", err)
-      // toast({
-      //   title: "Failed to post comment",
-      //   description: "There was an error posting your comment. Please try again.",
-      //   variant: "destructive",
-      //   action: <ToastAction altText="Try again" onClick={() => submitComment()}>Try again</ToastAction>,
-      // })
+      toast({
+        title: "Failed to post comment",
+        description: "There was an error posting your comment. Please try again.",
+        variant: "destructive",
+        action: <ToastAction altText="Try again" onClick={() => submitComment()}>Try again</ToastAction>,
+      })
     } finally {
       setIsSubmittingComment(false)
     }
@@ -205,6 +205,11 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   // Function to count comments for a specific ad
   const getCommentCountForAd = (adId: string) => {
     return comments.filter(comment => comment.adId === adId).length;
+  }
+
+  // Function to count campaign level comments (those without adId)
+  const getCampaignCommentCount = () => {
+    return comments.filter(comment => !comment.adId).length;
   }
 
   // Function to open sidebar with ad-specific comments
@@ -369,7 +374,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
               className="flex items-center gap-1"
             >
               <MessageSquare size={18} />
-              Campaign Comments
+              Campaign Comments {getCampaignCommentCount() > 0 ? `(${getCampaignCommentCount()})` : ''}
             </Button>
           </div>
 
@@ -478,7 +483,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                         <div className="flex justify-between mb-1">
                           <p className="font-medium text-sm">{comment.author}</p>
                           <p className="text-gray-500 text-xs">
-                            {format(comment.createdAt, 'MMM d, yyyy')}
+                            {format(comment.createdAt, 'MMM d, yyyy, h:mm a')}
                           </p>
                         </div>
                         <p className="text-sm">{comment.text}</p>
@@ -497,21 +502,24 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                     <Label htmlFor="authorName">Your Name</Label>
                     <Input 
                       id="authorName"
-                      placeholder="Enter your name"
+                      placeholder="Anonymous"
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
                       disabled={isSubmittingComment}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="commentText">Your Comment</Label>
+                    <Label htmlFor="commentText" className="flex items-center">
+                      Comment <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Textarea 
                       id="commentText"
-                      placeholder={selectedAdId ? "Comment on this ad..." : "Comment on this campaign..."}
+                      placeholder={selectedAdId ? "Comment on ad..." : "Comment on campaign..."}
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       className="resize-none min-h-[80px]"
                       disabled={isSubmittingComment}
+                      required
                     />
                   </div>
                   <Button 
