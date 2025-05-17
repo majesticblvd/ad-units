@@ -5,13 +5,16 @@ import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { AdPreview } from "@/components/ad-preview"
 import { Card } from "@/components/ui/card"
-import { RefreshCcw, MessageSquare, X, ArrowLeft } from "lucide-react"
+import { RefreshCcw, MessageSquare, X } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import MasonryGrid from "@/components/ui/masonry-grid"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
+// import { toast } from "@/components/ui/use-toast"
+import { ToastAction } from "@/components/ui/toast"
+import { Input } from "@/components/ui/input"
 
 interface CampaignAd {
   id: string
@@ -23,6 +26,7 @@ interface CampaignAd {
 
 interface CampaignData {
   name: string
+  id: string
   ads: CampaignAd[]
 }
 
@@ -44,6 +48,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   const [isCommentSidebarOpen, setIsCommentSidebarOpen] = useState(false)
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState("")
+  const [authorName, setAuthorName] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [selectedAdId, setSelectedAdId] = useState<string | null>(null)
   
@@ -73,9 +78,13 @@ export default function CampaignSharePage({ params }: { params: { token: string 
         setAvailableSizes(sizes)
         setSelectedSizes(new Set(sizes))
         setCampaign({
+          id: campaignData.id,
           name: campaignData.name,
           ads: campaignData.ads
         })
+
+        // Load comments after campaign is loaded
+        await loadComments(campaignData.id)
       } catch (err) {
         setError("Campaign not found or access denied")
         console.error("Error fetching campaign:", err)
@@ -84,68 +93,102 @@ export default function CampaignSharePage({ params }: { params: { token: string 
       }
     }
 
-    const loadComments = () => {
-      // Mock comments - some for campaign, some for specific ads
-      const mockComments: Comment[] = [
-        {
-          id: "1",
-          text: "I like the design, but can we make the CTA button more prominent?",
-          author: "Jane Smith",
-          createdAt: new Date(Date.now() - 86400000) // 1 day ago
-        },
-        {
-          id: "2",
-          text: "The animation looks great! Let's proceed with this version.",
-          author: "John Doe",
-          createdAt: new Date(Date.now() - 172800000) // 2 days ago
-        },
-        {
-          id: "3",
-          text: "This ad needs a stronger headline.",
-          author: "Alice Johnson",
-          createdAt: new Date(Date.now() - 50000000),
-          adId: "ad1" // This is a mock ID that needs to match one of your actual ad IDs
-        },
-        {
-          id: "4",
-          text: "The colors on this ad look great!",
-          author: "Bob Wilson",
-          createdAt: new Date(Date.now() - 60000000),
-          adId: "ad2" // Another mock ID
-        },
-        {
-          id: "5",
-          text: "Can we adjust the logo size?",
-          author: "Chris Martin",
-          createdAt: new Date(Date.now() - 70000000),
-          adId: "ad1" // Same ad as comment 3
-        }
-      ]
-      setComments(mockComments)
-    }
-
     fetchCampaign()
-    loadComments()
   }, [params.token])
 
-  const submitComment = () => {
-    if (!newComment.trim()) return
+  const loadComments = async (campaignId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("campaign_comments")
+        .select("id, campaign_id, author, comment, created_at, ad_id")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false })
+      
+      if (error) {
+        console.error("Error fetching comments:", error)
+        // toast({
+        //   title: "Failed to load comments",
+        //   description: "There was a problem loading comments. Please try refreshing the page.",
+        //   variant: "destructive"
+        // })
+        return
+      }
+      
+      // Transform database comments to our Comment interface format
+      const transformedComments: Comment[] = data.map(comment => ({
+        id: comment.id,
+        text: comment.comment,
+        author: comment.author || "Anonymous",
+        createdAt: new Date(comment.created_at),
+        adId: comment.ad_id || undefined
+      }))
+      
+      setComments(transformedComments)
+    } catch (err) {
+      console.error("Error processing comments:", err)
+      // toast({
+      //   title: "Failed to load comments",
+      //   description: "Unexpected error while loading comments.",
+      //   variant: "destructive"
+      // })
+    }
+  }
+
+  const submitComment = async () => {
+    if (!newComment.trim() || !campaign) return
     
     setIsSubmittingComment(true)
     
-    setTimeout(() => {
+    try {
+      // Prepare the comment data for insertion
+      const commentData = {
+        campaign_id: campaign.id,
+        comment: newComment,
+        ad_id: selectedAdId || null, // null for campaign-level comments
+        created_at: new Date().toISOString(),
+        author: authorName ? authorName.trim() : null // Use entered name or default to "Anonymous"
+      }
+
+      // Insert the new comment into Supabase
+      const { data, error } = await supabase
+        .from("campaign_comments")
+        .insert(commentData)
+        .select()
+
+      if (error) {
+        throw error
+      }
+
+      // Get the new comment's data from the response
       const newCommentObj: Comment = {
-        id: `comment-${Date.now()}`,
-        text: newComment,
-        author: "You",
-        createdAt: new Date(),
-        adId: selectedAdId // Include the selected ad ID if we're commenting on a specific ad
+        id: data[0].id,
+        text: data[0].comment,
+        author: data[0].author || authorName.trim(),
+        createdAt: new Date(data[0].created_at),
+        adId: data[0].ad_id || undefined
       }
       
+      // Add the new comment to our local state
       setComments(prevComments => [newCommentObj, ...prevComments])
       setNewComment("")
+      setAuthorName("")
+      
+      // toast({
+      //   title: "Comment added",
+      //   description: "Your comment was successfully posted.",
+      //   variant: "default"
+      // })
+    } catch (err) {
+      console.error("Error submitting comment:", err)
+      // toast({
+      //   title: "Failed to post comment",
+      //   description: "There was an error posting your comment. Please try again.",
+      //   variant: "destructive",
+      //   action: <ToastAction altText="Try again" onClick={() => submitComment()}>Try again</ToastAction>,
+      // })
+    } finally {
       setIsSubmittingComment(false)
-    }, 500)
+    }
   }
 
   // Function to filter comments based on selected ad
@@ -450,13 +493,27 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                   e.preventDefault();
                   submitComment();
                 }} className="flex flex-col gap-2">
-                  <Textarea 
-                    placeholder={selectedAdId ? "Comment on this ad..." : "Comment on this campaign..."}
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="resize-none min-h-[80px]"
-                    disabled={isSubmittingComment}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="authorName">Your Name</Label>
+                    <Input 
+                      id="authorName"
+                      placeholder="Enter your name"
+                      value={authorName}
+                      onChange={(e) => setAuthorName(e.target.value)}
+                      disabled={isSubmittingComment}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="commentText">Your Comment</Label>
+                    <Textarea 
+                      id="commentText"
+                      placeholder={selectedAdId ? "Comment on this ad..." : "Comment on this campaign..."}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="resize-none min-h-[80px]"
+                      disabled={isSubmittingComment}
+                    />
+                  </div>
                   <Button 
                     type="submit" 
                     disabled={!newComment.trim() || isSubmittingComment}
