@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import MasonryGrid from "@/components/ui/masonry-grid"
+import { Textarea } from "@/components/ui/textarea"
+import { format } from "date-fns"
 
 interface CampaignAd {
   id: string
@@ -24,6 +26,13 @@ interface CampaignData {
   ads: CampaignAd[]
 }
 
+interface Comment {
+  id: string
+  text: string
+  author: string
+  createdAt: Date
+}
+
 export default function CampaignSharePage({ params }: { params: { token: string } }) {
   const [campaign, setCampaign] = useState<CampaignData | null>(null)
   const [selectedSizes, setSelectedSizes] = useState<Set<string>>(new Set())
@@ -32,6 +41,9 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   const [error, setError] = useState<string | null>(null)
   const [replayCounters, setReplayCounters] = useState<{ [key: string]: number }>({})
   const [isCommentSidebarOpen, setIsCommentSidebarOpen] = useState(false)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [newComment, setNewComment] = useState("")
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
 
   useEffect(() => {
     const fetchCampaign = async () => {
@@ -70,8 +82,46 @@ export default function CampaignSharePage({ params }: { params: { token: string 
       }
     }
 
+    const loadComments = () => {
+      const mockComments: Comment[] = [
+        {
+          id: "1",
+          text: "I like the design, but can we make the CTA button more prominent?",
+          author: "Jane Smith",
+          createdAt: new Date(Date.now() - 86400000) // 1 day ago
+        },
+        {
+          id: "2",
+          text: "The animation looks great! Let's proceed with this version.",
+          author: "John Doe",
+          createdAt: new Date(Date.now() - 172800000) // 2 days ago
+        }
+      ]
+      setComments(mockComments)
+    }
+
     fetchCampaign()
+    loadComments()
   }, [params.token])
+
+  const submitComment = () => {
+    if (!newComment.trim()) return
+    
+    setIsSubmittingComment(true)
+    
+    setTimeout(() => {
+      const newCommentObj: Comment = {
+        id: `comment-${Date.now()}`,
+        text: newComment,
+        author: "You",
+        createdAt: new Date()
+      }
+      
+      setComments(prevComments => [newCommentObj, ...prevComments])
+      setNewComment("")
+      setIsSubmittingComment(false)
+    }, 500)
+  }
 
   const handleReplay = (adId: string) => {
     setReplayCounters((prev) => ({
@@ -283,9 +333,46 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                 </Button>
               </div>
               
-              <div className="flex-grow overflow-y-auto">
-                <p className="text-gray-500 text-sm">No comments yet for this campaign.</p>
-                {/* Add comment listing and forms here */}
+              <div className="flex-grow overflow-y-auto mb-4">
+                {comments.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No comments yet for this campaign.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex justify-between mb-1">
+                          <p className="font-medium text-sm">{comment.author}</p>
+                          <p className="text-gray-500 text-xs">
+                            {format(comment.createdAt, 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                        <p className="text-sm">{comment.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="border-t pt-3">
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  submitComment();
+                }} className="flex flex-col gap-2">
+                  <Textarea 
+                    placeholder="Add your comment..." 
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="resize-none min-h-[80px]"
+                    disabled={isSubmittingComment}
+                  />
+                  <Button 
+                    type="submit" 
+                    disabled={!newComment.trim() || isSubmittingComment}
+                    className="self-end"
+                  >
+                    {isSubmittingComment ? 'Sending...' : 'Comment'}
+                  </Button>
+                </form>
               </div>
             </div>
           </motion.div>
