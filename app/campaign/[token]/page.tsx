@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import MasonryGrid from "@/components/ui/masonry-grid"
 import { Textarea } from "@/components/ui/textarea"
-import { format } from "date-fns"
+import { format, formatDistanceToNowStrict } from "date-fns"
 import { toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,7 @@ interface CampaignAd {
   files: string[]
   title: string
   position?: number
+  created_at?: string
 }
 
 interface CampaignData {
@@ -65,7 +66,8 @@ export default function CampaignSharePage({ params }: { params: { token: string 
               ad_size,
               files,
               title,
-              position
+              position,
+              created_at
             )
           `)
           .eq("share_token", params.token)
@@ -407,6 +409,11 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                     >
                       {ad.title || campaign.name}
                     </motion.h3>
+                    {ad.created_at && (
+                      <p className="text-gray-500 text-xs -mt-3 mb-3">
+                        Uploaded {formatDistanceToNowStrict(new Date(ad.created_at), { addSuffix: true })}
+                      </p>
+                    )}
                   </div>
 
                   <motion.div 
@@ -434,10 +441,15 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                         variant="ghost" 
                         size="sm"
                         onClick={() => openAdComments(ad.id)}
-                        className="text-xs flex items-center gap-1"
+                        className="h-8 w-8 p-0 flex items-center justify-center"
+                        aria-label={commentCount > 0 ? `View comments (${commentCount})` : "Add comment"}
                       >
                         <MessageSquare size={14} />
-                        {commentCount > 0 ? `${commentCount} comment${commentCount !== 1 ? 's' : ''}` : 'Add comment'}
+                        {commentCount > 0 && (
+                          <span className="sr-only">
+                            {commentCount} comment{commentCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
                       </Button>
                     </div>
                     <Button 
