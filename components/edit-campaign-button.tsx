@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pencil, Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Campaign {
   id: string
@@ -16,6 +19,8 @@ interface Campaign {
 interface EditCampaignButtonProps {
   adId: string
   currentCampaignId: string
+  currentTitle?: string
+  currentDescription?: string
   onUpdate?: () => void // Callback function to run after campaign is updated
   campaigns?: Campaign[]
   className?: string
@@ -25,6 +30,8 @@ interface EditCampaignButtonProps {
 export function EditCampaignButton({
   adId,
   currentCampaignId,
+  currentTitle,
+  currentDescription,
   onUpdate,
   campaigns: initialCampaigns,
   className = '',
@@ -35,6 +42,16 @@ export function EditCampaignButton({
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns || [])
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(currentCampaignId)
   const [isFetchingCampaigns, setIsFetchingCampaigns] = useState(!initialCampaigns)
+  const [title, setTitle] = useState<string>(currentTitle || "")
+  const [description, setDescription] = useState<string>(currentDescription || "")
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedCampaignId(currentCampaignId)
+      setTitle(currentTitle || "")
+      setDescription(currentDescription || "")
+    }
+  }, [isOpen, currentCampaignId, currentTitle, currentDescription])
 
   // Fetch campaigns if not provided as props
   useEffect(() => {
@@ -65,45 +82,67 @@ export function EditCampaignButton({
     }
   }
 
-  const handleUpdateCampaign = async () => {
-    if (!selectedCampaignId || selectedCampaignId === currentCampaignId) {
+  const handleSave = async () => {
+    const normalizedTitle = title.trim()
+    const normalizedDescription = description.trim()
+
+    const nextTitle = normalizedTitle.length > 0 ? normalizedTitle : null
+    const nextDescription = normalizedDescription.length > 0 ? normalizedDescription : null
+
+    const didMoveCampaign = selectedCampaignId && selectedCampaignId !== currentCampaignId
+    const didChangeTitle = (currentTitle || null) !== nextTitle
+    const didChangeDescription = (currentDescription || null) !== nextDescription
+
+    if (!didMoveCampaign && !didChangeTitle && !didChangeDescription) {
       setIsOpen(false)
       return
     }
   
     try {
       setIsLoading(true)
-      
-      // Get the highest position in the target campaign
-      const { data: highestPositionData, error: positionError } = await supabase
-        .from("ads")
-        .select("position")
-        .eq("campaign_id", selectedCampaignId)
-        .order("position", { ascending: false })
-        .limit(1)
-      
-      if (positionError) throw positionError
-      
-      // Calculate new position (either 1 if no ads, or highest + 1)
-      const newPosition = (highestPositionData && highestPositionData.length > 0 && 
-                           highestPositionData[0]?.position) 
-                           ? (highestPositionData[0].position + 1) 
-                           : 1
-      
-      // Update the ad with new campaign and position
+
+      const updatePayload: {
+        campaign_id?: string
+        position?: number
+        title?: string | null
+        description?: string | null
+      } = {
+        title: nextTitle,
+        description: nextDescription,
+      }
+
+      if (didMoveCampaign) {
+        // Get the highest position in the target campaign
+        const { data: highestPositionData, error: positionError } = await supabase
+          .from("ads")
+          .select("position")
+          .eq("campaign_id", selectedCampaignId)
+          .order("position", { ascending: false })
+          .limit(1)
+
+        if (positionError) throw positionError
+
+        const newPosition = (highestPositionData && highestPositionData.length > 0 &&
+          highestPositionData[0]?.position)
+          ? (highestPositionData[0].position + 1)
+          : 1
+
+        updatePayload.campaign_id = selectedCampaignId
+        updatePayload.position = newPosition
+      }
+
       const { error } = await supabase
         .from("ads")
-        .update({ 
-          campaign_id: selectedCampaignId,
-          position: newPosition 
-        })
+        .update(updatePayload)
         .eq("id", adId)
-      
+
       if (error) throw error
       
       toast({
-        title: "Campaign Updated",
-        description: "Ad has been moved to the selected campaign.",
+        title: "Ad Updated",
+        description: didMoveCampaign
+          ? "Ad updated and moved to the selected campaign."
+          : "Ad updated successfully.",
       })
       
       setIsOpen(false)
@@ -136,10 +175,34 @@ export function EditCampaignButton({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Move Ad to Different Campaign</DialogTitle>
+          <DialogTitle>Edit Ad</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
+            <Label htmlFor={`ad-title-${adId}`}>Title</Label>
+            <Input
+              id={`ad-title-${adId}`}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ad title"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`ad-description-${adId}`}>Description</Label>
+            <Textarea
+              id={`ad-description-${adId}`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ad description"
+              disabled={isLoading}
+              className="min-h-[100px]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Campaign</Label>
             {isFetchingCampaigns ? (
               <div className="flex justify-center py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
@@ -173,16 +236,22 @@ export function EditCampaignButton({
               Cancel
             </Button>
             <Button
-              onClick={handleUpdateCampaign}
-              disabled={isLoading || !selectedCampaignId || selectedCampaignId === currentCampaignId}
+              onClick={handleSave}
+              disabled={
+                isLoading ||
+                !selectedCampaignId ||
+                ((selectedCampaignId === currentCampaignId) &&
+                  (title.trim() === (currentTitle || "").trim()) &&
+                  (description.trim() === (currentDescription || "").trim()))
+              }
             >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  Saving...
                 </>
               ) : (
-                'Update Campaign'
+                'Save Changes'
               )}
             </Button>
           </div>

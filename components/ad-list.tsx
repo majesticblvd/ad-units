@@ -17,11 +17,12 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { supabase } from "@/lib/supabase"
 import { AdPreview } from "./ad-preview"
-import { RefreshCcw, ChevronUp, ChevronDown, FolderSymlink } from "lucide-react"
+import { RefreshCcw, ChevronUp, ChevronDown, Copy, Check, Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import { ShareDialogButton } from "./share-button"
 import { EditCampaignButton } from "./edit-campaign-button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Input } from "@/components/ui/input"
+import { formatDistanceToNow } from "date-fns"
 
 
 interface Ad {
@@ -33,6 +34,7 @@ interface Ad {
   ad_size: string
   files: string[]
   position?: number
+  created_at?: string
 }
 
 interface Campaign {
@@ -55,9 +57,86 @@ export function AdList({ refreshSignal }: AdListProps) {
   const [reorderingAds, setReorderingAds] = useState<Ad[]>([]);
   const [adToSwap, setAdToSwap] = useState<string | null>(null);
 
+  const [shareUrl, setShareUrl] = useState<string>("")
+  const [isShareLoading, setIsShareLoading] = useState(false)
+  const [isShareCopied, setIsShareCopied] = useState(false)
+
   useEffect(() => {
     fetchData()
   }, [refreshSignal])
+
+  const generateShareToken = () => {
+    return Array.from(crypto.getRandomValues(new Uint8Array(24)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  useEffect(() => {
+    const loadShareUrl = async () => {
+      if (selectedCampaignId === "all") {
+        setShareUrl("")
+        setIsShareCopied(false)
+        return
+      }
+
+      try {
+        setIsShareLoading(true)
+        const { data, error } = await supabase
+          .from("campaigns")
+          .select("share_token")
+          .eq("id", selectedCampaignId)
+          .single()
+
+        if (error) throw error
+
+        let shareToken = data?.share_token as string | null | undefined
+        if (!shareToken) {
+          shareToken = generateShareToken()
+          const { error: updateError } = await supabase
+            .from("campaigns")
+            .update({ share_token: shareToken })
+            .eq("id", selectedCampaignId)
+          if (updateError) throw updateError
+        }
+
+        const url = `${window.location.origin}/campaign/${shareToken}`
+        setShareUrl(url)
+      } catch (error) {
+        console.error("Error generating share link:", error)
+        setShareUrl("")
+        toast({
+          title: "Error",
+          description: "Failed to generate share link.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsShareLoading(false)
+        setIsShareCopied(false)
+      }
+    }
+
+    loadShareUrl()
+  }, [selectedCampaignId])
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setIsShareCopied(true)
+      setTimeout(() => setIsShareCopied(false), 2000)
+      toast({
+        title: "Share link copied",
+        description: "The campaign link is in your clipboard.",
+      })
+    } catch (error) {
+      console.error("Clipboard error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to copy share link.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -79,6 +158,7 @@ export function AdList({ refreshSignal }: AdListProps) {
           ad_size,
           files,
           position,
+          created_at,
           campaigns:campaigns (
             name
           )
@@ -346,6 +426,14 @@ export function AdList({ refreshSignal }: AdListProps) {
         </div>
       )}
 
+      {ad.created_at && (
+        <div className="px-4 pt-1">
+          <p className="text-xs text-gray-500">
+            {formatDistanceToNow(new Date(ad.created_at), { addSuffix: true })}
+          </p>
+        </div>
+      )}
+
       {ad.description && (
         <Collapsible
           open={openDescriptions.has(ad.id)}
@@ -396,6 +484,8 @@ export function AdList({ refreshSignal }: AdListProps) {
           <EditCampaignButton 
             adId={ad.id}
             currentCampaignId={ad.campaign_id}
+            currentTitle={ad.title}
+            currentDescription={ad.description}
             campaigns={campaigns}
             onUpdate={fetchData}
             size="sm"
@@ -430,21 +520,47 @@ export function AdList({ refreshSignal }: AdListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2">
-        <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select Campaign" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Campaigns</SelectItem>
-            {campaigns.map((campaign) => (
-              <SelectItem key={campaign.id} value={campaign.id}>
-                {campaign.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <ShareDialogButton className="ml-auto py-4" campaigns={campaigns} />
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Campaign" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Campaigns</SelectItem>
+              {campaigns.map((campaign) => (
+                <SelectItem key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedCampaignId !== "all" && (
+          <div className="flex gap-2 items-center">
+            <Input
+              value={isShareLoading ? "Generating share link…" : shareUrl}
+              readOnly
+              className="bg-muted"
+            />
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={copyShareUrl}
+              disabled={isShareLoading || !shareUrl}
+              aria-label="Copy share link"
+            >
+              {isShareLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isShareCopied ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {groupedCampaignAds.length > 0 ? (

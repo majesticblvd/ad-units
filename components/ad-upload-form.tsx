@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
 import { Textarea } from "./ui/textarea"
+import JSZip from "jszip"
 
 interface Campaign {
   id: string
@@ -41,11 +42,71 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
   const [adSize, setAdSize] = useState("")
   const [customWidth, setCustomWidth] = useState("")
   const [customHeight, setCustomHeight] = useState("")
-  const [files, setFiles] = useState<FileList | null>(null)
+  const [files, setFiles] = useState<File[]>([])
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [isNewCampaignDialogOpen, setIsNewCampaignDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  const extractZipFiles = async (zipFile: File): Promise<File[]> => {
+    const zip = await JSZip.loadAsync(zipFile)
+    const entries = Object.values(zip.files)
+      .filter((entry) => !entry.dir)
+      .filter((entry) => !entry.name.startsWith("__MACOSX/"))
+      .filter((entry) => !entry.name.endsWith(".DS_Store"))
+
+    const extracted: File[] = []
+    for (const entry of entries) {
+      const blob = await entry.async("blob")
+      extracted.push(new File([blob], entry.name, { type: blob.type || "application/octet-stream" }))
+    }
+
+    return extracted
+  }
+
+  const handleFilesChange = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) {
+      setFiles([])
+      return
+    }
+
+    const selected = Array.from(fileList)
+    const isZip = selected.length === 1 && selected[0].name.toLowerCase().endsWith(".zip")
+
+    if (!isZip) {
+      setFiles(selected)
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      const extracted = await extractZipFiles(selected[0])
+      if (extracted.length === 0) {
+        toast({
+          title: "Empty ZIP",
+          description: "No files found in the ZIP.",
+          variant: "destructive",
+        })
+        setFiles([])
+        return
+      }
+      setFiles(extracted)
+      toast({
+        title: "ZIP extracted",
+        description: `Loaded ${extracted.length} file${extracted.length === 1 ? "" : "s"} from the ZIP.`,
+      })
+    } catch (error) {
+      console.error("ZIP extract error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to read ZIP file.",
+        variant: "destructive",
+      })
+      setFiles([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Fetch campaigns on component mount
   useEffect(() => {
@@ -191,11 +252,10 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
       })
 
       // Clear form
-      setSelectedCampaignId("")
       setAdSize("")
       setCustomWidth("")
       setCustomHeight("")
-      setFiles(null)
+      setFiles([])
       setTitle("")
       setDescription("")
       if (e.target instanceof HTMLFormElement) {
@@ -336,11 +396,16 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
         <Input
           id="files"
           type="file"
-          onChange={(e) => setFiles(e.target.files)}
+          onChange={(e) => handleFilesChange(e.target.files)}
           multiple
           required
           className="bg-transparent border-gray-300 shadow-none"
         />
+        {files.length > 0 && (
+          <p className="mt-1 text-xs text-gray-500">
+            {files.length} file{files.length === 1 ? "" : "s"} ready to upload
+          </p>
+        )}
       </div>
 
       <Button className="w-full" type="submit" disabled={isLoading}>
