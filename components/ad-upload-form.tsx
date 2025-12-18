@@ -43,6 +43,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
   const [customWidth, setCustomWidth] = useState("")
   const [customHeight, setCustomHeight] = useState("")
   const [files, setFiles] = useState<File[]>([])
+  const [zipStatusMessage, setZipStatusMessage] = useState<string | null>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [isNewCampaignDialogOpen, setIsNewCampaignDialogOpen] = useState(false)
@@ -67,6 +68,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
   const handleFilesChange = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) {
       setFiles([])
+      setZipStatusMessage(null)
       return
     }
 
@@ -75,6 +77,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 
     if (!isZip) {
       setFiles(selected)
+      setZipStatusMessage(null)
       return
     }
 
@@ -88,13 +91,13 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
           variant: "destructive",
         })
         setFiles([])
+        setZipStatusMessage(null)
         return
       }
       setFiles(extracted)
-      toast({
-        title: "ZIP extracted",
-        description: `Loaded ${extracted.length} file${extracted.length === 1 ? "" : "s"} from the ZIP.`,
-      })
+      setZipStatusMessage(
+        `Loaded ${extracted.length} file${extracted.length === 1 ? "" : "s"} from the ZIP — ready to upload.`
+      )
     } catch (error) {
       console.error("ZIP extract error:", error)
       toast({
@@ -103,6 +106,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
         variant: "destructive",
       })
       setFiles([])
+      setZipStatusMessage(null)
     } finally {
       setIsLoading(false)
     }
@@ -256,6 +260,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
       setCustomWidth("")
       setCustomHeight("")
       setFiles([])
+      setZipStatusMessage(null)
       setTitle("")
       setDescription("")
       if (e.target instanceof HTMLFormElement) {
@@ -401,10 +406,13 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
           required
           className="bg-transparent border-gray-300 shadow-none"
         />
-        {files.length > 0 && (
+        {files.length > 0 && !zipStatusMessage && (
           <p className="mt-1 text-xs text-gray-500">
             {files.length} file{files.length === 1 ? "" : "s"} ready to upload
           </p>
+        )}
+        {zipStatusMessage && (
+          <p className="mt-1 text-xs text-gray-500">{zipStatusMessage}</p>
         )}
       </div>
 

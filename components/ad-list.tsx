@@ -57,6 +57,8 @@ export function AdList({ refreshSignal }: AdListProps) {
   const [reorderingAds, setReorderingAds] = useState<Ad[]>([]);
   const [adToSwap, setAdToSwap] = useState<string | null>(null);
 
+  const [isDataLoading, setIsDataLoading] = useState(true)
+
   const [shareUrl, setShareUrl] = useState<string>("")
   const [isShareLoading, setIsShareLoading] = useState(false)
   const [isShareCopied, setIsShareCopied] = useState(false)
@@ -139,6 +141,7 @@ export function AdList({ refreshSignal }: AdListProps) {
   }
 
   const fetchData = async () => {
+    setIsDataLoading(true)
     try {
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
@@ -183,6 +186,8 @@ export function AdList({ refreshSignal }: AdListProps) {
         description: "Failed to fetch ads and campaigns.",
         variant: "destructive",
       })
+    } finally {
+      setIsDataLoading(false)
     }
   }
 
@@ -426,14 +431,6 @@ export function AdList({ refreshSignal }: AdListProps) {
         </div>
       )}
 
-      {ad.created_at && (
-        <div className="px-4 pt-1">
-          <p className="text-xs text-gray-500">
-            {formatDistanceToNow(new Date(ad.created_at), { addSuffix: true })}
-          </p>
-        </div>
-      )}
-
       {ad.description && (
         <Collapsible
           open={openDescriptions.has(ad.id)}
@@ -467,6 +464,11 @@ export function AdList({ refreshSignal }: AdListProps) {
           <p className="rounded-full px-2 py-1 text-xs bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
             {ad.ad_size}
           </p>
+          {ad.created_at && (
+            <p className="text-xs text-gray-500">
+              {formatDistanceToNow(new Date(ad.created_at), { addSuffix: true })}
+            </p>
+          )}
           {/* <div className="text-xs text-gray-500 flex items-center">
             <FolderSymlink className="h-3 w-3 mr-1" />
             {ad.campaign_name}
@@ -563,7 +565,12 @@ export function AdList({ refreshSignal }: AdListProps) {
         )}
       </div>
 
-      {groupedCampaignAds.length > 0 ? (
+      {isDataLoading ? (
+        <div className="flex items-center justify-center py-10 text-gray-500">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading ads...
+        </div>
+      ) : groupedCampaignAds.length > 0 ? (
         <div className="space-y-10">
           {groupedCampaignAds.map(({ campaign, ads }) => (
             <div key={campaign.id} className="space-y-4">
