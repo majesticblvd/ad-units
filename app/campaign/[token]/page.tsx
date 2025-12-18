@@ -15,6 +15,7 @@ import { format, formatDistanceToNowStrict } from "date-fns"
 import { toast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
 import { Input } from "@/components/ui/input"
+import { formatBytes } from "@/lib/utils"
 
 interface CampaignAd {
   id: string
@@ -23,6 +24,7 @@ interface CampaignAd {
   title: string
   position?: number
   created_at?: string
+  filesize?: number | null
 }
 
 interface CampaignData {
@@ -67,7 +69,8 @@ export default function CampaignSharePage({ params }: { params: { token: string 
               files,
               title,
               position,
-              created_at
+              created_at,
+              filesize
             )
           `)
           .eq("share_token", params.token)
@@ -412,6 +415,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
                     {ad.created_at && (
                       <p className="text-gray-500 text-xs -mt-3 mb-3">
                         Uploaded {formatDistanceToNowStrict(new Date(ad.created_at), { addSuffix: true })}
+                        {typeof ad.filesize === "number" && ad.filesize > 0 ? ` • ${formatBytes(ad.filesize)}` : ""}
                       </p>
                     )}
                   </div>

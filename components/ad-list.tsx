@@ -23,6 +23,7 @@ import { EditCampaignButton } from "./edit-campaign-button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
 import { Input } from "@/components/ui/input"
 import { formatDistanceToNow } from "date-fns"
+import { formatBytes } from "@/lib/utils"
 
 
 interface Ad {
@@ -35,6 +36,7 @@ interface Ad {
   files: string[]
   position?: number
   created_at?: string
+  filesize?: number | null
 }
 
 interface Campaign {
@@ -162,6 +164,7 @@ export function AdList({ refreshSignal }: AdListProps) {
           files,
           position,
           created_at,
+          filesize,
           campaigns:campaigns (
             name
           )
@@ -467,6 +470,7 @@ export function AdList({ refreshSignal }: AdListProps) {
           {ad.created_at && (
             <p className="text-xs text-gray-500">
               {formatDistanceToNow(new Date(ad.created_at), { addSuffix: true })}
+              {typeof ad.filesize === "number" && ad.filesize > 0 ? ` • ${formatBytes(ad.filesize)}` : ""}
             </p>
           )}
           {/* <div className="text-xs text-gray-500 flex items-center">

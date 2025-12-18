@@ -198,6 +198,8 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
       const campaign = campaigns.find(c => c.id === selectedCampaignId)
       if (!campaign) throw new Error("Campaign not found")
 
+      const totalFileSizeBytes = files.reduce((sum, file) => sum + (file?.size || 0), 0)
+
       const fileUrls: string[] = []
       const timestamp = Date.now()
       const uniqueId = Math.random().toString(36).substring(2, 15)
@@ -243,6 +245,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
         campaign_id: selectedCampaignId,
         ad_size: finalAdSize,
         files: fileUrls,
+        filesize: totalFileSizeBytes,
         title: title || null,
         description: description || null,
         position: newPosition // Add this line
