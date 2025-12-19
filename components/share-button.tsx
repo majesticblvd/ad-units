@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Share, Loader2, Copy, Check } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
-import { Input } from "@/components/ui/input"
 
 interface Campaign {
   id: string
@@ -26,7 +25,6 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
   const [shareUrl, setShareUrl] = useState<string>("")
   const [isCopied, setIsCopied] = useState(false)
   const [isChrome, setIsChrome] = useState(false)
-  const urlInputRef = useRef<HTMLInputElement>(null)
 
   // Check if browser is Chrome on component mount
   useEffect(() => {
@@ -158,10 +156,10 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
               className="w-full"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Link...
-                </>
+                <span className="inline-flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="sr-only">Generating share link</span>
+                </span>
               ) : (
                 <>
                   <Share className="mr-2 h-4 w-4" />
@@ -172,12 +170,16 @@ export function ShareDialogButton({ campaigns, className = '' }: ShareDialogButt
           ) : (
             <div className="space-y-2">
               <div className="flex gap-2">
-                <Input 
-                  ref={urlInputRef}
-                  value={shareUrl}
-                  readOnly
-                  className="bg-muted"
-                />
+                <div className="flex-1 rounded-md border px-3 py-2 text-sm">
+                  <a
+                    href={shareUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all font-medium text-blue-700 underline hover:no-underline"
+                  >
+                    {shareUrl}
+                  </a>
+                </div>
                 <Button 
                   size="icon"
                   variant="outline"

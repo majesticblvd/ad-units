@@ -545,11 +545,25 @@ export function AdList({ refreshSignal }: AdListProps) {
 
         {selectedCampaignId !== "all" && (
           <div className="flex gap-2 items-center">
-            <Input
-              value={isShareLoading ? "Generating share link…" : shareUrl}
-              readOnly
-              className="bg-muted"
-            />
+            <div className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm">
+              {isShareLoading ? (
+                <span className="inline-flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="sr-only">Generating share link</span>
+                </span>
+              ) : shareUrl ? (
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="break-all underline"
+                >
+                  {shareUrl}
+                </a>
+              ) : (
+                <span className="text-muted-foreground">Share link unavailable</span>
+              )}
+            </div>
             <Button
               size="icon"
               variant="outline"
