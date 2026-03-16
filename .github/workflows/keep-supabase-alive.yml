@@ -2,8 +2,8 @@ name: Keep Supabase Project Alive
 
 on:
   schedule:
-    - cron: '0 9 * * 1,4' # Every Monday and Thursday at 9:00 UTC
-  workflow_dispatch:      # Allow manual trigger from Actions tab
+    - cron: '0 9 * * *' # Every day at 9:00 UTC
+  workflow_dispatch: # Allow manual trigger from Actions tab
 
 jobs:
   ping:
@@ -12,4 +12,11 @@ jobs:
     steps:
       - name: Ping Supabase Health Endpoint
         run: |
-          curl -s -o /dev/null -w "%{http_code}" "https://dqfyagxejrhrgsoqyscg.supabase.co/rest/v1/health?apikey=${{ secrets.SUPABASE_ANON_KEY }}"
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}" \
+            "https://dqfyagxejrhrgsoqyscg.supabase.co/rest/v1/health")
+          echo "Response: $response"
+          if [ "$response" != "200" ]; then
+            echo "Health check failed with status $response"
+            exit 1
+          fi
