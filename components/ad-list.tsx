@@ -13,7 +13,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -32,10 +32,17 @@ import {
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Combobox } from "@/components/ui/combobox";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { cn, formatBytes } from "@/lib/utils";
 import { AdPreview } from "./ad-preview";
+import { useCampaigns } from "./campaign-provider";
 import { EditCampaignButton } from "./edit-campaign-button";
 
 interface Ad {
@@ -51,10 +58,170 @@ interface Ad {
 	filesize?: number | null;
 }
 
-interface Campaign {
-	id: string;
-	name: string;
+interface AdCardProps {
+	ad: Ad;
+	isFirst: boolean;
+	isLast: boolean;
+	replayCounter: number;
+	isDescriptionOpen: boolean;
+	onToggleDescription: (adId: string) => void;
+	onMoveAd: (ad: Ad, direction: "up" | "down") => void;
+	onReplay: (adId: string) => void;
+	onDelete: (ad: Ad) => void;
+	onUpdate: () => void;
 }
+
+const AdCard = memo(function AdCard({
+	ad,
+	isFirst,
+	isLast,
+	replayCounter,
+	isDescriptionOpen,
+	onToggleDescription,
+	onMoveAd,
+	onReplay,
+	onDelete,
+	onUpdate,
+}: AdCardProps) {
+	return (
+		<div className="border border-gray-200 rounded-lg h-fit overflow-hidden flex flex-col bg-white shadow-sm">
+			<div className="w-full flex justify-center items-center overflow-hidden p-2">
+				{ad.files && ad.files.length > 0 ? (
+					<AdPreview
+						key={`${ad.id}-${replayCounter}`}
+						adFile={
+							ad.files.find((file) => file.toLowerCase().endsWith(".html")) ||
+							ad.files[0]
+						}
+						adSize={ad.ad_size}
+					/>
+				) : (
+					<div className="flex items-center justify-center h-32 w-full bg-gray-100 text-gray-400 text-sm">
+						No preview available
+					</div>
+				)}
+			</div>
+
+			{ad.title && (
+				<div className="px-4 pt-2">
+					<h4 className="text-base font-semibold text-gray-900">{ad.title}</h4>
+				</div>
+			)}
+
+			{ad.description && (
+				<Collapsible
+					open={isDescriptionOpen}
+					onOpenChange={() => onToggleDescription(ad.id)}
+					className="px-4"
+				>
+					<div className="flex items-center gap-1">
+						<CollapsibleTrigger asChild>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="p-0 h-auto hover:bg-transparent"
+							>
+								<span className="text-xs text-gray-500 hover:text-gray-700">
+									{isDescriptionOpen ? "Hide Details" : "AD Details"}
+								</span>
+								{isDescriptionOpen ? (
+									<ChevronUp className="h-3 w-3 ml-1" />
+								) : (
+									<ChevronDown className="h-3 w-3 ml-1" />
+								)}
+							</Button>
+						</CollapsibleTrigger>
+					</div>
+					<CollapsibleContent className="pt-2">
+						<p className="text-xs text-gray-600 whitespace-pre-wrap">
+							{ad.description}
+						</p>
+					</CollapsibleContent>
+				</Collapsible>
+			)}
+
+			<div className="px-4 py-3 mt-auto flex w-full justify-between items-center">
+				<div className="flex items-center gap-2">
+					<p className="rounded-md px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800">
+						{ad.ad_size}
+					</p>
+					{ad.created_at && (
+						<p className="text-xs text-gray-500">
+							{formatDistanceToNow(new Date(ad.created_at), {
+								addSuffix: true,
+							})}
+							{typeof ad.filesize === "number" && ad.filesize > 0
+								? ` • ${formatBytes(ad.filesize)}`
+								: ""}
+						</p>
+					)}
+				</div>
+				<div className="flex space-x-1">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => onMoveAd(ad, "up")}
+						disabled={isFirst}
+						className="hover:bg-gray-100 p-1 h-8"
+					>
+						<ArrowUp size={14} />
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => onMoveAd(ad, "down")}
+						disabled={isLast}
+						className="hover:bg-gray-100 p-1 h-8"
+					>
+						<ArrowDown size={14} />
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => onReplay(ad.id)}
+						className="hover:bg-gray-100 p-1 h-8"
+					>
+						<RefreshCcw size={14} />
+					</Button>
+					<EditCampaignButton
+						adId={ad.id}
+						currentCampaignId={ad.campaign_id}
+						currentTitle={ad.title}
+						currentDescription={ad.description}
+						onUpdate={onUpdate}
+						size="sm"
+					/>
+					<AlertDialog>
+						<AlertDialogTrigger asChild>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="h-8 p-1 hover:bg-gray-100"
+							>
+								<Trash2 size={14} />
+							</Button>
+						</AlertDialogTrigger>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle>Are you sure?</AlertDialogTitle>
+								<AlertDialogDescription>
+									This action cannot be undone. This will permanently delete
+									your ad and its files.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogAction onClick={() => onDelete(ad)}>
+									Delete
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</div>
+			</div>
+		</div>
+	);
+});
 
 interface AdListProps {
 	refreshSignal?: number;
@@ -64,7 +231,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const [ads, setAds] = useState<Ad[]>([]);
-	const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+	const { campaigns, refetch: refetchCampaigns } = useCampaigns();
 
 	const selectedCampaignId = searchParams.get("campaign") || "all";
 	const setSelectedCampaignId = (value: string) => {
@@ -92,6 +259,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 	const [shareUrl, setShareUrl] = useState<string>("");
 	const [isShareLoading, setIsShareLoading] = useState(false);
 	const [isShareCopied, setIsShareCopied] = useState(false);
+	const [isDeletingCampaign, setIsDeletingCampaign] = useState(false);
 
 	useEffect(() => {
 		fetchData();
@@ -172,36 +340,85 @@ export function AdList({ refreshSignal }: AdListProps) {
 		}
 	};
 
+	const deleteCampaign = async () => {
+		if (selectedCampaignId === "all") return;
+
+		setIsDeletingCampaign(true);
+		try {
+			// Delete all ads' files from storage for this campaign
+			const campaignAds = ads.filter(
+				(a) => a.campaign_id === selectedCampaignId,
+			);
+			for (const ad of campaignAds) {
+				for (const fileUrl of ad.files) {
+					const filePath = fileUrl.split("/ad-files/")[1];
+					if (filePath) {
+						await supabase.storage.from("ad-files").remove([filePath]);
+					}
+				}
+			}
+
+			// Delete all ads in this campaign
+			const { error: adsError } = await supabase
+				.from("ads")
+				.delete()
+				.eq("campaign_id", selectedCampaignId);
+			if (adsError) throw adsError;
+
+			// Delete the campaign itself
+			const { error: campaignError } = await supabase
+				.from("campaigns")
+				.delete()
+				.eq("id", selectedCampaignId);
+			if (campaignError) throw campaignError;
+
+			toast({
+				title: "Campaign Deleted",
+				description: "The campaign and all its ads were deleted.",
+			});
+
+			// Reset to "all" and refresh
+			setSelectedCampaignId("all");
+			await fetchData();
+		} catch (error) {
+			console.error("Error deleting campaign:", error);
+			toast({
+				title: "Error",
+				description: "Failed to delete the campaign.",
+				variant: "destructive",
+			});
+		} finally {
+			setIsDeletingCampaign(false);
+		}
+	};
+
 	const fetchData = async () => {
 		setIsDataLoading(true);
 		try {
-			const { data: campaignData, error: campaignError } = await supabase
-				.from("campaigns")
-				.select("id, name")
-				.order("name");
+			const [, adResult] = await Promise.all([
+				refetchCampaigns(),
+				supabase
+					.from("ads")
+					.select(`
+						id,
+						campaign_id,
+						title,
+						description,
+						ad_size,
+						files,
+						position,
+						created_at,
+						filesize,
+						campaigns:campaigns (
+							name
+						)
+					`)
+					.order("position")
+					.limit(500),
+			]);
 
-			if (campaignError) throw campaignError;
-			setCampaigns(campaignData || []);
-
-			const { data: adData, error: adError } = await supabase
-				.from("ads")
-				.select(`
-          id,
-          campaign_id,
-          title,
-          description,
-          ad_size,
-          files,
-          position,
-          created_at,
-          filesize,
-          campaigns:campaigns (
-            name
-          )
-        `)
-				.order("position");
-
-			if (adError) throw adError;
+			if (adResult.error) throw adResult.error;
+			const adData = adResult.data;
 
 			const transformedAds =
 				adData?.map((ad) => ({
@@ -212,7 +429,6 @@ export function AdList({ refreshSignal }: AdListProps) {
 				})) || [];
 
 			setAds(transformedAds);
-			console.log("Fetched ads:", transformedAds);
 		} catch (error) {
 			console.error("Failed to fetch data:", error);
 			toast({
@@ -222,43 +438,6 @@ export function AdList({ refreshSignal }: AdListProps) {
 			});
 		} finally {
 			setIsDataLoading(false);
-		}
-	};
-
-	// Initialize ad positions for all campaigns on first load just to start
-	const initializePositions = async () => {
-		try {
-			// Get all campaigns
-			const { data: campaigns, error: campaignError } = await supabase
-				.from("campaigns")
-				.select("id");
-
-			if (campaignError) throw campaignError;
-
-			// For each campaign, update its ads with sequential positions
-			for (const campaign of campaigns) {
-				// Get ads for this campaign
-				const { data: campaignAds, error: adsError } = await supabase
-					.from("ads")
-					.select("id")
-					.eq("campaign_id", campaign.id);
-
-				if (adsError) throw adsError;
-
-				// Update each ad with a position
-				for (let i = 0; i < campaignAds.length; i++) {
-					const { error: updateError } = await supabase
-						.from("ads")
-						.update({ position: i + 1 })
-						.eq("id", campaignAds[i].id);
-
-					if (updateError) throw updateError;
-				}
-			}
-
-			console.log("Position initialization complete");
-		} catch (error) {
-			console.error("Error initializing positions:", error);
 		}
 	};
 
@@ -285,12 +464,12 @@ export function AdList({ refreshSignal }: AdListProps) {
 			.filter((group) => group.ads.length > 0);
 	};
 
-	const handleReplay = (adId: string) => {
+	const handleReplay = useCallback((adId: string) => {
 		setReplayCounters((prev) => ({
 			...prev,
 			[adId]: (prev[adId] || 0) + 1,
 		}));
-	};
+	}, []);
 
 	const handleDelete = async (ad: Ad) => {
 		try {
@@ -324,8 +503,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 		}
 	};
 
-	// Toggle description visibility
-	const toggleDescription = (adId: string) => {
+	const toggleDescription = useCallback((adId: string) => {
 		setOpenDescriptions((prev) => {
 			const newSet = new Set(prev);
 			if (newSet.has(adId)) {
@@ -335,7 +513,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 			}
 			return newSet;
 		});
-	};
+	}, []);
 
 	const moveAd = async (ad: Ad, direction: "up" | "down") => {
 		const campaignAds = ads
@@ -373,6 +551,11 @@ export function AdList({ refreshSignal }: AdListProps) {
 					})
 					.sort((a, b) => (a.position || 0) - (b.position || 0)),
 			);
+
+			toast({
+				title: "Ad Moved",
+				description: `Ad moved ${direction}.`,
+			});
 		} catch (error) {
 			console.error("Error moving ad:", error);
 			toast({
@@ -383,160 +566,26 @@ export function AdList({ refreshSignal }: AdListProps) {
 		}
 	};
 
-	// Render an individual ad card
 	const renderAdCard = (ad: Ad, campaignAds: Ad[]) => {
 		const sortedCampaignAds = [...campaignAds].sort(
 			(a, b) => (a.position || 0) - (b.position || 0),
 		);
 		const adIndex = sortedCampaignAds.findIndex((a) => a.id === ad.id);
-		const isFirst = adIndex === 0;
-		const isLast = adIndex === sortedCampaignAds.length - 1;
 
 		return (
-			<div
+			<AdCard
 				key={ad.id}
-				className="border border-gray-200 rounded-lg h-fit overflow-hidden flex flex-col bg-white shadow-sm"
-			>
-				<div className="w-full flex justify-center items-center overflow-hidden p-2">
-					{ad.files && ad.files.length > 0 ? (
-						<AdPreview
-							key={`${ad.id}-${replayCounters[ad.id] || 0}`}
-							adFile={
-								ad.files.find((file) => file.toLowerCase().endsWith(".html")) ||
-								ad.files[0]
-							}
-							adSize={ad.ad_size}
-						/>
-					) : (
-						<div className="flex items-center justify-center h-32 w-full bg-gray-100 text-gray-400 text-sm">
-							No preview available
-						</div>
-					)}
-				</div>
-
-				{ad.title && (
-					<div className="px-4 pt-2">
-						<h4 className="text-base font-semibold text-gray-900">
-							{ad.title}
-						</h4>
-					</div>
-				)}
-
-				{ad.description && (
-					<Collapsible
-						open={openDescriptions.has(ad.id)}
-						onOpenChange={() => toggleDescription(ad.id)}
-						className="px-4"
-					>
-						<div className="flex items-center gap-1">
-							<CollapsibleTrigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="p-0 h-auto hover:bg-transparent"
-								>
-									<span className="text-xs text-gray-500 hover:text-gray-700">
-										{openDescriptions.has(ad.id)
-											? "Hide Details"
-											: "AD Details"}
-									</span>
-									{openDescriptions.has(ad.id) ? (
-										<ChevronUp className="h-3 w-3 ml-1" />
-									) : (
-										<ChevronDown className="h-3 w-3 ml-1" />
-									)}
-								</Button>
-							</CollapsibleTrigger>
-						</div>
-						<CollapsibleContent className="pt-2">
-							<p className="text-xs text-gray-600 whitespace-pre-wrap">
-								{ad.description}
-							</p>
-						</CollapsibleContent>
-					</Collapsible>
-				)}
-
-				<div className="px-4 py-3 mt-auto flex w-full justify-between items-center">
-					<div className="flex items-center gap-2">
-						<p className="rounded-md px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800">
-							{ad.ad_size}
-						</p>
-						{ad.created_at && (
-							<p className="text-xs text-gray-500">
-								{formatDistanceToNow(new Date(ad.created_at), {
-									addSuffix: true,
-								})}
-								{typeof ad.filesize === "number" && ad.filesize > 0
-									? ` • ${formatBytes(ad.filesize)}`
-									: ""}
-							</p>
-						)}
-					</div>
-					<div className="flex space-x-1">
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => moveAd(ad, "up")}
-							disabled={isFirst}
-							className="hover:bg-gray-100 p-1 h-8"
-						>
-							<ArrowUp size={14} />
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => moveAd(ad, "down")}
-							disabled={isLast}
-							className="hover:bg-gray-100 p-1 h-8"
-						>
-							<ArrowDown size={14} />
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => handleReplay(ad.id)}
-							className="hover:bg-gray-100 p-1 h-8"
-						>
-							<RefreshCcw size={14} />
-						</Button>
-						<EditCampaignButton
-							adId={ad.id}
-							currentCampaignId={ad.campaign_id}
-							currentTitle={ad.title}
-							currentDescription={ad.description}
-							campaigns={campaigns}
-							onUpdate={fetchData}
-							size="sm"
-						/>
-						<AlertDialog>
-							<AlertDialogTrigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="h-8 p-1 hover:bg-gray-100"
-								>
-									<Trash2 size={14} />
-								</Button>
-							</AlertDialogTrigger>
-							<AlertDialogContent>
-								<AlertDialogHeader>
-									<AlertDialogTitle>Are you sure?</AlertDialogTitle>
-									<AlertDialogDescription>
-										This action cannot be undone. This will permanently delete
-										your ad and its files.
-									</AlertDialogDescription>
-								</AlertDialogHeader>
-								<AlertDialogFooter>
-									<AlertDialogCancel>Cancel</AlertDialogCancel>
-									<AlertDialogAction onClick={() => handleDelete(ad)}>
-										Delete
-									</AlertDialogAction>
-								</AlertDialogFooter>
-							</AlertDialogContent>
-						</AlertDialog>
-					</div>
-				</div>
-			</div>
+				ad={ad}
+				isFirst={adIndex === 0}
+				isLast={adIndex === sortedCampaignAds.length - 1}
+				replayCounter={replayCounters[ad.id] || 0}
+				isDescriptionOpen={openDescriptions.has(ad.id)}
+				onToggleDescription={toggleDescription}
+				onMoveAd={moveAd}
+				onReplay={handleReplay}
+				onDelete={handleDelete}
+				onUpdate={fetchData}
+			/>
 		);
 	};
 
@@ -550,10 +599,18 @@ export function AdList({ refreshSignal }: AdListProps) {
 				<div className="w-120">
 					<Combobox
 						options={[
-							{ value: "all", label: "All Campaigns", subLabel: `${totalAdsCount} ads` },
+							{
+								value: "all",
+								label: "All Campaigns",
+								subLabel: `${totalAdsCount} ads`,
+							},
 							...campaigns.map((c) => {
 								const count = ads.filter((a) => a.campaign_id === c.id).length;
-								return { value: c.id, label: c.name, subLabel: `${count} ${count === 1 ? "ad" : "ads"}` };
+								return {
+									value: c.id,
+									label: c.name,
+									subLabel: `${count} ${count === 1 ? "ad" : "ads"}`,
+								};
 							}),
 						]}
 						value={selectedCampaignId}
@@ -566,36 +623,82 @@ export function AdList({ refreshSignal }: AdListProps) {
 				</div>
 
 				{selectedCampaignId !== "all" && (
-					<div className={cn("flex items-center gap-3 text-sm text-muted-foreground min-h-10 transition-opacity", isCampaignSwitching && "opacity-50 pointer-events-none")}>
-						{isShareLoading ? (
-							<LoaderCircle className="h-4 w-4 animate-spin" />
-						) : shareUrl ? (
-							<span className="inline-flex items-center gap-2">
-								<a
-									href={shareUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="break-all underline text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-								>
-									{shareUrl}
-								</a>
-								<button
-									type="button"
-									onClick={copyShareUrl}
-									className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-									aria-label="Copy share link"
-								>
-									{isShareCopied ? (
-										<Check className="h-4 w-4" />
-									) : (
-										<Copy className="h-4 w-4" />
-									)}
-								</button>
-							</span>
-						) : (
-							<span>Share link unavailable</span>
-						)}
-					</div>
+					<TooltipProvider delayDuration={300}>
+						<div
+							className={cn(
+								"flex items-center gap-3 text-sm text-muted-foreground min-h-10 transition-opacity",
+								isCampaignSwitching && "opacity-50 pointer-events-none",
+							)}
+						>
+							{isShareLoading ? (
+								<LoaderCircle className="h-4 w-4 animate-spin" />
+							) : shareUrl ? (
+								<span className="inline-flex items-center gap-2">
+									<a
+										href={shareUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="break-all underline text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									>
+										{shareUrl}
+									</a>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<button
+												type="button"
+												onClick={copyShareUrl}
+												className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+												aria-label="Copy share link"
+											>
+												{isShareCopied ? (
+													<Check className="h-4 w-4" />
+												) : (
+													<Copy className="h-4 w-4" />
+												)}
+											</button>
+										</TooltipTrigger>
+										<TooltipContent>
+											{isShareCopied ? "Copied!" : "Copy share URL"}
+										</TooltipContent>
+									</Tooltip>
+									<AlertDialog>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<AlertDialogTrigger asChild>
+													<button
+														type="button"
+														className="shrink-0 text-muted-foreground hover:text-red-600 transition-colors cursor-pointer"
+														aria-label="Delete campaign"
+														disabled={isDeletingCampaign}
+													>
+														<Trash2 className="h-4 w-4" />
+													</button>
+												</AlertDialogTrigger>
+											</TooltipTrigger>
+											<TooltipContent>Delete campaign</TooltipContent>
+										</Tooltip>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>Delete campaign?</AlertDialogTitle>
+												<AlertDialogDescription>
+													This will permanently delete the campaign and all its
+													ads. This action cannot be undone.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel>Cancel</AlertDialogCancel>
+												<AlertDialogAction onClick={deleteCampaign}>
+													Delete
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
+								</span>
+							) : (
+								<span>Share link unavailable</span>
+							)}
+						</div>
+					</TooltipProvider>
 				)}
 			</div>
 
@@ -628,6 +731,10 @@ export function AdList({ refreshSignal }: AdListProps) {
 							</div>
 						</div>
 					))}
+				</div>
+			) : selectedCampaignId !== "all" ? (
+				<div className="flex items-center justify-center min-h-[40vh]">
+					<p className="text-lg text-gray-400">No ads in campaign</p>
 				</div>
 			) : (
 				<div className="text-center py-10 text-gray-500">

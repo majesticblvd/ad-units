@@ -4,7 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
 const ppNeueMontreal = localFont({
-	src: "./fonts/PPNeueMontreal-Variable.woff",
+	src: "./fonts/PPNeueMontreal-Variable.woff2",
 	variable: "--font-pp-neue-montreal",
 	weight: "100 200 300 400 500 600 700 800 900",
 });

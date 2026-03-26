@@ -1,8 +1,7 @@
 "use client";
 
-import JSZip from "jszip";
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -16,12 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useCampaigns } from "./campaign-provider";
 import { Textarea } from "./ui/textarea";
-
-interface Campaign {
-	id: string;
-	name: string;
-}
 
 interface AdUploadFormProps {
 	onUploadSuccess?: () => void;
@@ -43,7 +38,7 @@ const AD_SIZES = [
 ];
 
 export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
-	const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+	const { campaigns, refetch: refetchCampaigns } = useCampaigns();
 	const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
 	const [newCampaignName, setNewCampaignName] = useState("");
 	const [adSize, setAdSize] = useState("");
@@ -57,6 +52,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 	const [isLoading, setIsLoading] = useState(false);
 
 	const extractZipFiles = async (zipFile: File): Promise<File[]> => {
+		const { default: JSZip } = await import("jszip");
 		const zip = await JSZip.loadAsync(zipFile);
 		const entries = Object.values(zip.files)
 			.filter((entry) => !entry.dir)
@@ -124,34 +120,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 		}
 	};
 
-	// Fetch campaigns on component mount
-	useEffect(() => {
-		fetchCampaigns();
-	}, []);
-
-	// Fetch campaigns from Supabase
-	const fetchCampaigns = async () => {
-		try {
-			const { data, error } = await supabase
-				.from("campaigns")
-				.select("id, name")
-				.order("name");
-
-			if (error) throw error;
-			setCampaigns(data || []);
-		} catch (error) {
-			console.error("Error fetching campaigns:", error);
-			toast({
-				title: "Error",
-				description: "Failed to fetch campaigns.",
-				variant: "destructive",
-			});
-		}
-	};
-
-	// Generate a unique share token for the new campaign
 	const generateShareToken = () => {
-		// Generate a random 32-character string
 		return Array.from(crypto.getRandomValues(new Uint8Array(24)))
 			.map((b) => b.toString(16).padStart(2, "0"))
 			.join("");
@@ -178,7 +147,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 				description: "Campaign created successfully.",
 			});
 
-			setCampaigns([...campaigns, data]);
+			await refetchCampaigns();
 			setSelectedCampaignId(data.id);
 			setIsNewCampaignDialogOpen(false);
 			setNewCampaignName("");

@@ -1,4 +1,6 @@
+import { LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useInView } from "react-intersection-observer";
 
 interface AdPreviewProps {
 	adFile: string;
@@ -14,34 +16,17 @@ export function AdPreview({
 	const adContainerRef = useRef<HTMLDivElement>(null);
 	const iframeRef = useRef<HTMLIFrameElement | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	const [isVisible, setIsVisible] = useState(false);
 
-	// Add validation for adSize
-	const [width, height] = (adSize || "300x250").split("x").map((dim) => {
-		const num = parseInt(dim, 10);
-		return isNaN(num) ? 300 : num; // Default to 300 if parsing fails
+	const { ref: inViewRef, inView } = useInView({
+		triggerOnce: true,
+		rootMargin: "200px",
 	});
 
-	// Observe visibility — only load the ad once it enters the viewport
-	useEffect(() => {
-		const el = adContainerRef.current;
-		if (!el) return;
+	const [width, height] = (adSize || "300x250").split("x").map((dim) => {
+		const num = Number.parseInt(dim, 10);
+		return Number.isNaN(num) ? 300 : num;
+	});
 
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (entry.isIntersecting) {
-					setIsVisible(true);
-					observer.disconnect();
-				}
-			},
-			{ rootMargin: "200px" },
-		);
-
-		observer.observe(el);
-		return () => observer.disconnect();
-	}, []);
-
-	// Helper: get the base URL (directory) for the given file
 	const getBaseHref = (file: string) => {
 		try {
 			const url = new URL(file, window.location.href);
@@ -50,18 +35,17 @@ export function AdPreview({
 				url.pathname.lastIndexOf("/") + 1,
 			);
 			return url.toString();
-		} catch (e) {
+		} catch {
 			return window.location.origin;
 		}
 	};
 
 	useEffect(() => {
-		if (!isVisible) return;
+		if (!inView) return;
 
 		const loadAd = async () => {
 			if (!adContainerRef.current) return;
 
-			// Create iframe if it doesn't exist
 			if (!iframeRef.current) {
 				const iframe = document.createElement("iframe");
 				iframe.style.width = `${width}px`;
@@ -73,7 +57,6 @@ export function AdPreview({
 					"allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation",
 				);
 
-				// Add loading transition
 				iframe.style.opacity = "0";
 				iframe.style.transition = "opacity 0.2s ease-in";
 
@@ -99,7 +82,6 @@ export function AdPreview({
 						iframeRef.current.srcdoc = modifiedHtml;
 					}
 				} else {
-					// Preload image in memory
 					const img = new Image();
 					img.src = adFile;
 					await new Promise((resolve, reject) => {
@@ -148,7 +130,6 @@ export function AdPreview({
 					}
 				}
 
-				// Show iframe once content is loaded
 				if (iframeRef.current) {
 					iframeRef.current.onload = () => {
 						if (iframeRef.current) {
@@ -164,13 +145,13 @@ export function AdPreview({
 		};
 
 		loadAd();
-	}, [isVisible, adFile, width, height]);
+	}, [inView, adFile, width, height]);
 
 	return (
-		<div className="relative">
+		<div className="relative" ref={inViewRef}>
 			<div
 				ref={adContainerRef}
-				className={`bg-white  ${className}`}
+				className={`bg-white ${className}`}
 				style={{
 					width: `${width}px`,
 					height: `${height}px`,
@@ -178,13 +159,14 @@ export function AdPreview({
 			/>
 			{isLoading && (
 				<div
-					className="absolute inset-0 flex items-center justify-center bg-gray-50"
+					className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 gap-2"
 					style={{
 						width: `${width}px`,
 						height: `${height}px`,
 					}}
 				>
-					<div className="w-6 h-6 border-2  rounded-full animate-spin" />
+					<LoaderCircle className="h-6 w-6 text-muted-foreground animate-spin" />
+				<span className="text-xs text-muted-foreground">Loading ad...</span>
 				</div>
 			)}
 		</div>

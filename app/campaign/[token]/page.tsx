@@ -3,7 +3,7 @@
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { MessageSquare, RefreshCcw, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { AdPreview } from "@/components/ad-preview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -39,52 +39,6 @@ interface Comment {
 	author: string;
 	createdAt: Date;
 	adId?: string; // Optional adId to identify if this is an ad-specific comment
-}
-
-function LazyAdPreview({
-	adFile,
-	adSize,
-}: { adFile: string; adSize: string }) {
-	const ref = useRef<HTMLDivElement>(null);
-	const [isVisible, setIsVisible] = useState(false);
-
-	useEffect(() => {
-		const el = ref.current;
-		if (!el) return;
-
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (entry.isIntersecting) {
-					setIsVisible(true);
-					observer.disconnect();
-				}
-			},
-			{ rootMargin: "200px" },
-		);
-
-		observer.observe(el);
-		return () => observer.disconnect();
-	}, []);
-
-	const [width, height] = (adSize || "300x250").split("x").map((dim) => {
-		const num = parseInt(dim, 10);
-		return isNaN(num) ? 300 : num;
-	});
-
-	return (
-		<div ref={ref} style={{ width: `${width}px`, height: `${height}px` }}>
-			{isVisible ? (
-				<AdPreview adFile={adFile} adSize={adSize} />
-			) : (
-				<div
-					className="flex items-center justify-center bg-gray-50"
-					style={{ width: `${width}px`, height: `${height}px` }}
-				>
-					<div className="w-6 h-6 border-2 rounded-full animate-spin" />
-				</div>
-			)}
-		</div>
-	);
 }
 
 export default function CampaignSharePage({
@@ -501,7 +455,7 @@ export default function CampaignSharePage({
 										layout
 									>
 										{ad.files.length > 0 && (
-											<LazyAdPreview
+											<AdPreview
 												key={`${ad.id}-${replayCounters[ad.id] || 0}`}
 												adFile={
 													ad.files.find((file) =>

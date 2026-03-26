@@ -1,7 +1,7 @@
 "use client";
 
 import { LoaderCircle, Pencil } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -22,19 +22,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-
-interface Campaign {
-	id: string;
-	name: string;
-}
+import { useCampaigns } from "./campaign-provider";
 
 interface EditCampaignButtonProps {
 	adId: string;
 	currentCampaignId: string;
 	currentTitle?: string;
 	currentDescription?: string;
-	onUpdate?: () => void; // Callback function to run after campaign is updated
-	campaigns?: Campaign[];
+	onUpdate?: () => void;
 	className?: string;
 	size?: "default" | "sm" | "lg" | "icon";
 }
@@ -45,59 +40,25 @@ export function EditCampaignButton({
 	currentTitle,
 	currentDescription,
 	onUpdate,
-	campaigns: initialCampaigns,
 	className = "",
 	size = "sm",
 }: EditCampaignButtonProps) {
+	const { campaigns } = useCampaigns();
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
-	const [campaigns, setCampaigns] = useState<Campaign[]>(
-		initialCampaigns || [],
-	);
 	const [selectedCampaignId, setSelectedCampaignId] =
 		useState<string>(currentCampaignId);
-	const [isFetchingCampaigns, setIsFetchingCampaigns] = useState(
-		!initialCampaigns,
-	);
 	const [title, setTitle] = useState<string>(currentTitle || "");
 	const [description, setDescription] = useState<string>(
 		currentDescription || "",
 	);
 
-	useEffect(() => {
-		if (isOpen) {
+	const handleOpenChange = (open: boolean) => {
+		setIsOpen(open);
+		if (open) {
 			setSelectedCampaignId(currentCampaignId);
 			setTitle(currentTitle || "");
 			setDescription(currentDescription || "");
-		}
-	}, [isOpen, currentCampaignId, currentTitle, currentDescription]);
-
-	// Fetch campaigns if not provided as props
-	useEffect(() => {
-		if (!initialCampaigns) {
-			fetchCampaigns();
-		}
-	}, [initialCampaigns]);
-
-	const fetchCampaigns = async () => {
-		try {
-			setIsFetchingCampaigns(true);
-			const { data, error } = await supabase
-				.from("campaigns")
-				.select("id, name")
-				.order("name");
-
-			if (error) throw error;
-			setCampaigns(data || []);
-		} catch (error) {
-			console.error("Error fetching campaigns:", error);
-			toast({
-				title: "Error",
-				description: "Failed to fetch campaigns.",
-				variant: "destructive",
-			});
-		} finally {
-			setIsFetchingCampaigns(false);
 		}
 	};
 
@@ -188,7 +149,7 @@ export function EditCampaignButton({
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={setIsOpen}>
+		<Dialog open={isOpen} onOpenChange={handleOpenChange}>
 			<DialogTrigger asChild>
 				<Button
 					variant="ghost"
@@ -228,28 +189,22 @@ export function EditCampaignButton({
 
 					<div className="space-y-2">
 						<Label>Campaign</Label>
-						{isFetchingCampaigns ? (
-							<div className="flex justify-center py-4">
-								<LoaderCircle className="h-5 w-5 animate-spin text-gray-400" />
-							</div>
-						) : (
-							<Select
-								value={selectedCampaignId}
-								onValueChange={setSelectedCampaignId}
-								disabled={isLoading}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Select Campaign" />
-								</SelectTrigger>
-								<SelectContent>
-									{campaigns.map((campaign) => (
-										<SelectItem key={campaign.id} value={campaign.id}>
-											{campaign.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						)}
+						<Select
+							value={selectedCampaignId}
+							onValueChange={setSelectedCampaignId}
+							disabled={isLoading}
+						>
+							<SelectTrigger>
+								<SelectValue placeholder="Select Campaign" />
+							</SelectTrigger>
+							<SelectContent>
+								{campaigns.map((campaign) => (
+									<SelectItem key={campaign.id} value={campaign.id}>
+										{campaign.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 
 					<div className="flex justify-end space-x-2">
