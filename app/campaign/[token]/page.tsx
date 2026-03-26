@@ -3,7 +3,6 @@
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { MessageSquare, RefreshCcw, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import { AdPreview } from "@/components/ad-preview";
 import { Button } from "@/components/ui/button";
@@ -408,15 +407,6 @@ export default function CampaignSharePage({
 
 	return (
 		<main className="container w-full max-w-none relative">
-			<div className="header items-center mx-4 mt-4 rounded-lg bg-black flex justify-between p-6">
-				<Link href="/">
-					<img
-						className="w-28 h-auto"
-						src="/svgs/pxl-logo-light.svg"
-						alt="PXL Logo"
-					/>
-				</Link>
-			</div>
 			<div className="grid bg-gray-50 grid-cols-1 md:grid-cols-4 p-4 gap-6">
 				<div className="flex gap-4 flex-col">
 					{/* Left sidebar */}
@@ -424,34 +414,36 @@ export default function CampaignSharePage({
 						<h2 className="text-4xl font-semibold mb-6">{campaign.name}</h2>
 
 						<div className="space-y-4">
-							<p className="text-sm text-gray-200 font-medium">
-								Filter by Size
-							</p>
-							<div className="flex gap-2">
-								<Button
-									variant="secondary"
-									size="sm"
+							<div className="flex items-center justify-between">
+								<p className="text-sm text-gray-200 font-medium">
+									Filter by Size
+								</p>
+								<button
+									type="button"
 									onClick={handleSelectAll}
-									className="text-xs"
+									className="text-xs font-medium px-2 py-1 rounded-md border border-white/20 text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200 cursor-pointer"
 								>
 									Select All
-								</Button>
-								{/* <Button variant="outline" size="sm" onClick={handleClearAll} className="text-xs">
-                  Clear All
-                </Button> */}
+								</button>
 							</div>
-							<div className="flex flex-col gap-2">
+							<div className="flex flex-col gap-1">
 								{availableSizes.map((size) => (
-									<div key={size} className="flex items-center space-x-2">
+									<button
+										type="button"
+										key={size}
+										className="flex items-center space-x-2 rounded-md px-2 py-1.5 -mx-2 hover:bg-white/10 transition-colors duration-200 cursor-pointer"
+										onClick={() => handleSizeToggle(size)}
+									>
 										<Checkbox
 											id={`size-${size}`}
 											checked={selectedSizes.has(size)}
 											onCheckedChange={() => handleSizeToggle(size)}
+											className="border-white/40 data-[state=checked]:border-white data-[state=checked]:bg-white data-[state=checked]:text-black"
 										/>
-										<Label htmlFor={`size-${size}`} className="text-sm">
+										<Label htmlFor={`size-${size}`} className="text-sm cursor-pointer">
 											{size}
 										</Label>
-									</div>
+									</button>
 								))}
 							</div>
 						</div>
@@ -502,17 +494,6 @@ export default function CampaignSharePage({
 										>
 											{ad.title || campaign.name}
 										</motion.h3>
-										{ad.created_at && (
-											<p className="text-gray-500 text-xs -mt-3 mb-3">
-												Uploaded{" "}
-												{formatDistanceToNowStrict(new Date(ad.created_at), {
-													addSuffix: true,
-												})}
-												{typeof ad.filesize === "number" && ad.filesize > 0
-													? ` • ${formatBytes(ad.filesize)}`
-													: ""}
-											</p>
-										)}
 									</div>
 
 									<motion.div
@@ -540,6 +521,16 @@ export default function CampaignSharePage({
 											<p className="rounded-md px-3 py-0.5 text-sm font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800">
 												{ad.ad_size}
 											</p>
+											{ad.created_at && (
+												<p className="text-xs text-gray-500">
+													{formatDistanceToNowStrict(new Date(ad.created_at), {
+														addSuffix: true,
+													})}
+													{typeof ad.filesize === "number" && ad.filesize > 0
+														? ` • ${formatBytes(ad.filesize)}`
+														: ""}
+												</p>
+											)}
 											<Button
 												variant="ghost"
 												size="sm"
