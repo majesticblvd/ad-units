@@ -34,7 +34,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { formatBytes } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 import { AdPreview } from "./ad-preview";
 import { EditCampaignButton } from "./edit-campaign-button";
 
@@ -68,6 +68,9 @@ export function AdList({ refreshSignal }: AdListProps) {
 
 	const selectedCampaignId = searchParams.get("campaign") || "all";
 	const setSelectedCampaignId = (value: string) => {
+		if (value !== selectedCampaignId) {
+			setIsCampaignSwitching(true);
+		}
 		const params = new URLSearchParams(searchParams.toString());
 		if (value === "all") {
 			params.delete("campaign");
@@ -84,6 +87,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 		new Set(),
 	);
 	const [isDataLoading, setIsDataLoading] = useState(true);
+	const [isCampaignSwitching, setIsCampaignSwitching] = useState(false);
 
 	const [shareUrl, setShareUrl] = useState<string>("");
 	const [isShareLoading, setIsShareLoading] = useState(false);
@@ -104,6 +108,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 			if (selectedCampaignId === "all") {
 				setShareUrl("");
 				setIsShareCopied(false);
+				setIsCampaignSwitching(false);
 				return;
 			}
 
@@ -140,6 +145,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 			} finally {
 				setIsShareLoading(false);
 				setIsShareCopied(false);
+				setIsCampaignSwitching(false);
 			}
 		};
 
@@ -536,66 +542,102 @@ export function AdList({ refreshSignal }: AdListProps) {
 
 	const groupedCampaignAds = groupedAdsByCampaign();
 
+	const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
+	const selectedCampaignAds = selectedCampaign
+		? ads.filter((a) => a.campaign_id === selectedCampaign.id)
+		: [];
+
+	const totalAdsCount = ads.length;
+	const totalFilesize = ads.reduce(
+		(sum, ad) => sum + (ad.filesize || 0),
+		0,
+	);
+	const uniqueSizes = new Set(ads.map((a) => a.ad_size));
+
 	return (
 		<div className="space-y-6">
-			<div className="space-y-4">
-				<div className="flex gap-2">
+			<div className="flex flex-col sm:flex-row sm:items-center gap-4">
+				<div className="w-120">
 					<Combobox
 						options={[
-							{ value: "all", label: "All Campaigns" },
-							...campaigns.map((c) => ({ value: c.id, label: c.name })),
+							{ value: "all", label: "All Campaigns", subLabel: `${totalAdsCount} ads` },
+							...campaigns.map((c) => {
+								const count = ads.filter((a) => a.campaign_id === c.id).length;
+								return { value: c.id, label: c.name, subLabel: `${count} ${count === 1 ? "ad" : "ads"}` };
+							}),
 						]}
 						value={selectedCampaignId}
 						onValueChange={setSelectedCampaignId}
 						placeholder="Select Campaign"
 						searchPlaceholder="Search campaigns..."
 						emptyMessage="No campaigns found."
+						disabled={isCampaignSwitching}
 					/>
 				</div>
 
-				{selectedCampaignId !== "all" && (
-					<div className="flex items-center gap-3 text-sm">
-						{isShareLoading ? (
-							<span className="inline-flex items-center">
+				<div className={cn("flex items-center gap-4 text-sm text-muted-foreground min-h-10 transition-opacity", isCampaignSwitching && "opacity-50 pointer-events-none")}>
+					{selectedCampaignId === "all" ? (
+						<div className="flex items-center gap-4 flex-wrap">
+							<span>
+								<span className="font-medium text-foreground">{campaigns.length}</span>{" "}
+								{campaigns.length === 1 ? "campaign" : "campaigns"}
+							</span>
+							<span>
+								<span className="font-medium text-foreground">{totalAdsCount}</span>{" "}
+								{totalAdsCount === 1 ? "ad" : "ads"}
+							</span>
+							<span>
+								<span className="font-medium text-foreground">{uniqueSizes.size}</span>{" "}
+								{uniqueSizes.size === 1 ? "size" : "sizes"}
+							</span>
+							{totalFilesize > 0 && (
+								<span>{formatBytes(totalFilesize)} total</span>
+							)}
+						</div>
+					) : (
+						<div className="flex items-center gap-3 flex-wrap">
+							<span>
+								<span className="font-medium text-foreground">{selectedCampaignAds.length}</span>{" "}
+								{selectedCampaignAds.length === 1 ? "ad" : "ads"}
+							</span>
+							{isShareLoading ? (
 								<LoaderCircle className="h-4 w-4 animate-spin" />
-								<span className="sr-only">Generating share link</span>
-							</span>
-						) : shareUrl ? (
-							<>
-								<a
-									href={shareUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="break-all underline text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-								>
-									{shareUrl}
-								</a>
-								<button
-									type="button"
-									onClick={copyShareUrl}
-									className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-									aria-label="Copy share link"
-								>
-									{isShareCopied ? (
-										<Check className="h-4 w-4" />
-									) : (
-										<Copy className="h-4 w-4" />
-									)}
-								</button>
-							</>
-						) : (
-							<span className="text-muted-foreground">
-								Share link unavailable
-							</span>
-						)}
-					</div>
-				)}
+							) : shareUrl ? (
+								<span className="inline-flex items-center gap-2">
+									<span className="text-muted-foreground">•</span>
+									<a
+										href={shareUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="break-all underline text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									>
+										{shareUrl}
+									</a>
+									<button
+										type="button"
+										onClick={copyShareUrl}
+										className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+										aria-label="Copy share link"
+									>
+										{isShareCopied ? (
+											<Check className="h-4 w-4" />
+										) : (
+											<Copy className="h-4 w-4" />
+										)}
+									</button>
+								</span>
+							) : (
+								<span>Share link unavailable</span>
+							)}
+						</div>
+					)}
+				</div>
 			</div>
 
-			{isDataLoading ? (
+			{isDataLoading || isCampaignSwitching ? (
 				<div className="flex items-center justify-center flex-1 min-h-[50vh] text-gray-500">
 					<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-					Loading ads...
+					{isDataLoading ? "Loading ads..." : "Switching campaign..."}
 				</div>
 			) : groupedCampaignAds.length > 0 ? (
 				<div className="space-y-10">

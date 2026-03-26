@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 export interface ComboboxOption {
 	value: string;
 	label: string;
+	subLabel?: string;
 }
 
 interface ComboboxProps {
@@ -31,6 +32,7 @@ interface ComboboxProps {
 	searchPlaceholder?: string;
 	emptyMessage?: string;
 	className?: string;
+	disabled?: boolean;
 }
 
 export function Combobox({
@@ -41,18 +43,20 @@ export function Combobox({
 	searchPlaceholder = "Search...",
 	emptyMessage = "No results found.",
 	className,
+	disabled = false,
 }: ComboboxProps) {
 	const [open, setOpen] = useState(false);
 
 	const selectedLabel = options.find((opt) => opt.value === value)?.label;
 
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
+		<Popover open={disabled ? false : open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
 					variant="outline"
 					role="combobox"
 					aria-expanded={open}
+					disabled={disabled}
 					className={cn(
 						"w-full min-w-0 justify-between font-normal",
 						!value && "text-muted-foreground",
@@ -65,10 +69,14 @@ export function Combobox({
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+			<PopoverContent
+					className="p-0"
+					align="start"
+					style={{ width: "var(--radix-popover-trigger-width)" }}
+				>
 				<Command>
 					<CommandInput placeholder={searchPlaceholder} />
-					<CommandList>
+					<CommandList style={{ maxHeight: "24rem" }}>
 						<CommandEmpty>{emptyMessage}</CommandEmpty>
 						<CommandGroup>
 							{options.map((option) => (
@@ -89,6 +97,11 @@ export function Combobox({
 										)}
 									/>
 									{option.label}
+									{option.subLabel && (
+										<span className="ml-1 text-muted-foreground">
+											({option.subLabel})
+										</span>
+									)}
 								</CommandItem>
 							))}
 						</CommandGroup>
