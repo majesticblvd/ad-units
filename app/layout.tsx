@@ -4,29 +4,27 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
 const ppNeueMontreal = localFont({
-  src: "./fonts/PPNeueMontreal-Variable.woff",
-  variable: "--font-pp-neue-montreal",
-  weight: "100 200 300 400 500 600 700 800 900",
+	src: "./fonts/PPNeueMontreal-Variable.woff",
+	variable: "--font-pp-neue-montreal",
+	weight: "100 200 300 400 500 600 700 800 900",
 });
 
 export const metadata: Metadata = {
-  title: "Ad Showcase",
-  description: "Showcasing ads made with Google Web Designer",
+	title: "Ad Showcase",
+	description: "Showcasing ads made with Google Web Designer",
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${ppNeueMontreal.variable} antialiased`}
-      >
-        {children}
-        <Toaster />
-      </body>
-    </html>
-  );
+	return (
+		<html lang="en">
+			<body className={`${ppNeueMontreal.variable} antialiased`}>
+				{children}
+				<Toaster />
+			</body>
+		</html>
+	);
 }
