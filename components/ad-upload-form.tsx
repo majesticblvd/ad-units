@@ -313,7 +313,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 						placeholder="Select Campaign"
 						searchPlaceholder="Search campaigns..."
 						emptyMessage="No campaigns found."
-						className="bg-white border-gray-300 shadow-none"
+						className="flex-1 min-w-0 bg-white border-gray-300 shadow-none"
 					/>
 
 					<Dialog
