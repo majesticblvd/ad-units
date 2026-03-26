@@ -537,7 +537,7 @@ export default function CampaignSharePage({
 										layout="position"
 									>
 										<div className="flex items-center gap-2">
-											<p className="rounded-full px-3 py-1 text-sm bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
+											<p className="rounded-md px-3 py-0.5 text-sm font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800">
 												{ad.ad_size}
 											</p>
 											<Button

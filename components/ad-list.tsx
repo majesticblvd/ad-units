@@ -2,6 +2,8 @@
 
 import { formatDistanceToNow } from "date-fns";
 import {
+	ArrowDown,
+	ArrowUp,
 	Check,
 	ChevronDown,
 	ChevronUp,
@@ -29,26 +31,12 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { formatBytes } from "@/lib/utils";
 import { AdPreview } from "./ad-preview";
 import { EditCampaignButton } from "./edit-campaign-button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "./ui/dialog";
 
 interface Ad {
 	id: string;
@@ -95,13 +83,6 @@ export function AdList({ refreshSignal }: AdListProps) {
 	const [openDescriptions, setOpenDescriptions] = useState<Set<string>>(
 		new Set(),
 	);
-	const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
-	const [campaignToReorder, setCampaignToReorder] = useState<string | null>(
-		null,
-	);
-	const [reorderingAds, setReorderingAds] = useState<Ad[]>([]);
-	const [adToSwap, setAdToSwap] = useState<string | null>(null);
-
 	const [isDataLoading, setIsDataLoading] = useState(true);
 
 	const [shareUrl, setShareUrl] = useState<string>("");
@@ -350,244 +331,208 @@ export function AdList({ refreshSignal }: AdListProps) {
 		});
 	};
 
-	const openReorderModal = (campaignId: string) => {
+	const moveAd = async (ad: Ad, direction: "up" | "down") => {
 		const campaignAds = ads
-			.filter((ad) => ad.campaign_id === campaignId)
+			.filter((a) => a.campaign_id === ad.campaign_id)
 			.sort((a, b) => (a.position || 0) - (b.position || 0));
 
-		setReorderingAds(campaignAds);
-		setCampaignToReorder(campaignId);
-		setIsReorderModalOpen(true);
-	};
+		const currentIndex = campaignAds.findIndex((a) => a.id === ad.id);
+		const swapIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
 
-	const updateAdPosition = (adId: string, newPosition: number) => {
-		setReorderingAds((prev) => {
-			const updatedAds = [...prev];
-			const adIndex = updatedAds.findIndex((ad) => ad.id === adId);
-			if (adIndex === -1) return prev;
+		if (swapIndex < 0 || swapIndex >= campaignAds.length) return;
 
-			// Create a copy of the ad with updated position
-			const updatedAd = { ...updatedAds[adIndex], position: newPosition };
+		const otherAd = campaignAds[swapIndex];
+		const tempPosition = ad.position;
+		const newAdPosition = otherAd.position;
+		const newOtherPosition = tempPosition;
 
-			// Remove the ad and reinsert at the correct position based on new position
-			updatedAds.splice(adIndex, 1);
-
-			// Find the correct insertion index
-			let insertIndex = 0;
-			while (
-				insertIndex < updatedAds.length &&
-				(updatedAds[insertIndex].position || 0) < newPosition
-			) {
-				insertIndex++;
-			}
-
-			// Insert the updated ad
-			updatedAds.splice(insertIndex, 0, updatedAd);
-
-			// Update all positions to be sequential
-			return updatedAds.map((ad, index) => ({
-				...ad,
-				position: index + 1,
-			}));
-		});
-	};
-
-	// Function to swap two ads
-	const swapAds = (adId1: string, adId2: string) => {
-		setReorderingAds((prev) => {
-			const updatedAds = [...prev];
-			const adIndex1 = updatedAds.findIndex((ad) => ad.id === adId1);
-			const adIndex2 = updatedAds.findIndex((ad) => ad.id === adId2);
-
-			if (adIndex1 === -1 || adIndex2 === -1) return prev;
-
-			// Swap the positions
-			const tempPosition = updatedAds[adIndex1].position;
-			updatedAds[adIndex1] = {
-				...updatedAds[adIndex1],
-				position: updatedAds[adIndex2].position,
-			};
-			updatedAds[adIndex2] = {
-				...updatedAds[adIndex2],
-				position: tempPosition,
-			};
-
-			// Sort the array by position
-			return updatedAds.sort((a, b) => (a.position || 0) - (b.position || 0));
-		});
-
-		setAdToSwap(null); // Reset the swap selection
-	};
-
-	// Function to save the new order to the database
-	const saveNewOrder = async () => {
 		try {
-			// Create updates for all ads with their new positions
-			const updates = reorderingAds.map((ad) => ({
-				id: ad.id,
-				position: ad.position,
-			}));
-
-			// Update in Supabase
-			const { error } = await supabase
-				.from("ads")
-				.upsert(updates, { onConflict: "id" });
+			const { error } = await supabase.from("ads").upsert(
+				[
+					{ id: ad.id, position: newAdPosition },
+					{ id: otherAd.id, position: newOtherPosition },
+				],
+				{ onConflict: "id" },
+			);
 
 			if (error) throw error;
 
-			// Update the main ads state
-			setAds((prevAds) => {
-				const otherAds = prevAds.filter(
-					(ad) => !reorderingAds.some((ra) => ra.id === ad.id),
-				);
-				return [...otherAds, ...reorderingAds];
-			});
-
-			toast({
-				title: "Order Updated",
-				description: "The ad order has been saved.",
-			});
-
-			setIsReorderModalOpen(false);
+			setAds((prev) =>
+				prev
+					.map((a) => {
+						if (a.id === ad.id) return { ...a, position: newAdPosition };
+						if (a.id === otherAd.id)
+							return { ...a, position: newOtherPosition };
+						return a;
+					})
+					.sort((a, b) => (a.position || 0) - (b.position || 0)),
+			);
 		} catch (error) {
-			console.error("Error saving ad order:", error);
+			console.error("Error moving ad:", error);
 			toast({
 				title: "Error",
-				description: "Failed to save the new order.",
+				description: "Failed to move the ad.",
 				variant: "destructive",
 			});
 		}
 	};
 
 	// Render an individual ad card
-	const renderAdCard = (ad: Ad) => (
-		<div
-			key={ad.id}
-			className="border border-gray-200 rounded-lg h-fit overflow-hidden flex flex-col bg-white shadow-sm"
-		>
-			<div className="w-full flex justify-center items-center overflow-hidden p-2">
-				{ad.files && ad.files.length > 0 ? (
-					<AdPreview
-						key={`${ad.id}-${replayCounters[ad.id] || 0}`}
-						adFile={
-							ad.files.find((file) => file.toLowerCase().endsWith(".html")) ||
-							ad.files[0]
-						}
-						adSize={ad.ad_size}
-					/>
-				) : (
-					<div className="flex items-center justify-center h-32 w-full bg-gray-100 text-gray-400 text-sm">
-						No preview available
+	const renderAdCard = (ad: Ad, campaignAds: Ad[]) => {
+		const sortedCampaignAds = [...campaignAds].sort(
+			(a, b) => (a.position || 0) - (b.position || 0),
+		);
+		const adIndex = sortedCampaignAds.findIndex((a) => a.id === ad.id);
+		const isFirst = adIndex === 0;
+		const isLast = adIndex === sortedCampaignAds.length - 1;
+
+		return (
+			<div
+				key={ad.id}
+				className="border border-gray-200 rounded-lg h-fit overflow-hidden flex flex-col bg-white shadow-sm"
+			>
+				<div className="w-full flex justify-center items-center overflow-hidden p-2">
+					{ad.files && ad.files.length > 0 ? (
+						<AdPreview
+							key={`${ad.id}-${replayCounters[ad.id] || 0}`}
+							adFile={
+								ad.files.find((file) => file.toLowerCase().endsWith(".html")) ||
+								ad.files[0]
+							}
+							adSize={ad.ad_size}
+						/>
+					) : (
+						<div className="flex items-center justify-center h-32 w-full bg-gray-100 text-gray-400 text-sm">
+							No preview available
+						</div>
+					)}
+				</div>
+
+				{ad.title && (
+					<div className="px-4 pt-2">
+						<h4 className="text-base font-semibold text-gray-900">
+							{ad.title}
+						</h4>
 					</div>
 				)}
-			</div>
 
-			{ad.title && (
-				<div className="px-4 pt-2">
-					<h4 className="text-base font-semibold text-gray-900">{ad.title}</h4>
-				</div>
-			)}
-
-			{ad.description && (
-				<Collapsible
-					open={openDescriptions.has(ad.id)}
-					onOpenChange={() => toggleDescription(ad.id)}
-					className="px-4"
-				>
-					<div className="flex items-center gap-1">
-						<CollapsibleTrigger asChild>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="p-0 h-auto hover:bg-transparent"
-							>
-								<span className="text-xs text-gray-500 hover:text-gray-700">
-									{openDescriptions.has(ad.id) ? "Hide Details" : "AD Details"}
-								</span>
-								{openDescriptions.has(ad.id) ? (
-									<ChevronUp className="h-3 w-3 ml-1" />
-								) : (
-									<ChevronDown className="h-3 w-3 ml-1" />
-								)}
-							</Button>
-						</CollapsibleTrigger>
-					</div>
-					<CollapsibleContent className="pt-2">
-						<p className="text-xs text-gray-600 whitespace-pre-wrap">
-							{ad.description}
-						</p>
-					</CollapsibleContent>
-				</Collapsible>
-			)}
-
-			<div className="px-4 py-3 mt-auto flex w-full justify-between items-center">
-				<div className="flex items-center gap-2">
-					<p className="rounded-full px-2 py-1 text-xs bg-[#0dab5439] text-[#0A8B43] border-[#0DAB53] border">
-						{ad.ad_size}
-					</p>
-					{ad.created_at && (
-						<p className="text-xs text-gray-500">
-							{formatDistanceToNow(new Date(ad.created_at), {
-								addSuffix: true,
-							})}
-							{typeof ad.filesize === "number" && ad.filesize > 0
-								? ` • ${formatBytes(ad.filesize)}`
-								: ""}
-						</p>
-					)}
-					{/* <div className="text-xs text-gray-500 flex items-center">
-            <FolderSymlink className="h-3 w-3 mr-1" />
-            {ad.campaign_name}
-          </div> */}
-				</div>
-				<div className="flex space-x-2">
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => handleReplay(ad.id)}
-						className="hover:bg-gray-100 p-1 h-8"
+				{ad.description && (
+					<Collapsible
+						open={openDescriptions.has(ad.id)}
+						onOpenChange={() => toggleDescription(ad.id)}
+						className="px-4"
 					>
-						<RefreshCcw size={14} />
-					</Button>
-					<EditCampaignButton
-						adId={ad.id}
-						currentCampaignId={ad.campaign_id}
-						currentTitle={ad.title}
-						currentDescription={ad.description}
-						campaigns={campaigns}
-						onUpdate={fetchData}
-						size="sm"
-					/>
-					<AlertDialog>
-						<AlertDialogTrigger asChild>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-8 p-1 hover:bg-gray-100"
-							>
-								<Trash2 size={14} />
-							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>Are you sure?</AlertDialogTitle>
-								<AlertDialogDescription>
-									This action cannot be undone. This will permanently delete
-									your ad and its files.
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction onClick={() => handleDelete(ad)}>
-									Delete
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
+						<div className="flex items-center gap-1">
+							<CollapsibleTrigger asChild>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="p-0 h-auto hover:bg-transparent"
+								>
+									<span className="text-xs text-gray-500 hover:text-gray-700">
+										{openDescriptions.has(ad.id)
+											? "Hide Details"
+											: "AD Details"}
+									</span>
+									{openDescriptions.has(ad.id) ? (
+										<ChevronUp className="h-3 w-3 ml-1" />
+									) : (
+										<ChevronDown className="h-3 w-3 ml-1" />
+									)}
+								</Button>
+							</CollapsibleTrigger>
+						</div>
+						<CollapsibleContent className="pt-2">
+							<p className="text-xs text-gray-600 whitespace-pre-wrap">
+								{ad.description}
+							</p>
+						</CollapsibleContent>
+					</Collapsible>
+				)}
+
+				<div className="px-4 py-3 mt-auto flex w-full justify-between items-center">
+					<div className="flex items-center gap-2">
+						<p className="rounded-md px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800">
+							{ad.ad_size}
+						</p>
+						{ad.created_at && (
+							<p className="text-xs text-gray-500">
+								{formatDistanceToNow(new Date(ad.created_at), {
+									addSuffix: true,
+								})}
+								{typeof ad.filesize === "number" && ad.filesize > 0
+									? ` • ${formatBytes(ad.filesize)}`
+									: ""}
+							</p>
+						)}
+					</div>
+					<div className="flex space-x-1">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => moveAd(ad, "up")}
+							disabled={isFirst}
+							className="hover:bg-gray-100 p-1 h-8"
+						>
+							<ArrowUp size={14} />
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => moveAd(ad, "down")}
+							disabled={isLast}
+							className="hover:bg-gray-100 p-1 h-8"
+						>
+							<ArrowDown size={14} />
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => handleReplay(ad.id)}
+							className="hover:bg-gray-100 p-1 h-8"
+						>
+							<RefreshCcw size={14} />
+						</Button>
+						<EditCampaignButton
+							adId={ad.id}
+							currentCampaignId={ad.campaign_id}
+							currentTitle={ad.title}
+							currentDescription={ad.description}
+							campaigns={campaigns}
+							onUpdate={fetchData}
+							size="sm"
+						/>
+						<AlertDialog>
+							<AlertDialogTrigger asChild>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-8 p-1 hover:bg-gray-100"
+								>
+									<Trash2 size={14} />
+								</Button>
+							</AlertDialogTrigger>
+							<AlertDialogContent>
+								<AlertDialogHeader>
+									<AlertDialogTitle>Are you sure?</AlertDialogTitle>
+									<AlertDialogDescription>
+										This action cannot be undone. This will permanently delete
+										your ad and its files.
+									</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel>Cancel</AlertDialogCancel>
+									<AlertDialogAction onClick={() => handleDelete(ad)}>
+										Delete
+									</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
+					</div>
 				</div>
 			</div>
-		</div>
-	);
+		);
+	};
 
 	const groupedCampaignAds = groupedAdsByCampaign();
 
@@ -657,25 +602,18 @@ export function AdList({ refreshSignal }: AdListProps) {
 					{groupedCampaignAds.map(({ campaign, ads }) => (
 						<div key={campaign.id} className="space-y-4">
 							{/* Campaign header with count of ads */}
-							<div className="border-b border-gray-300 pb-2 flex justify-between items-center">
+							<div className="border-b border-gray-300 pb-2">
 								<h2 className="text-xl font-bold">
 									{campaign.name}
 									<span className="ml-2 text-sm font-normal text-gray-500">
 										({ads.length} {ads.length === 1 ? "ad" : "ads"})
 									</span>
 								</h2>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => openReorderModal(campaign.id)}
-								>
-									Reorder Ads
-								</Button>
 							</div>
 
 							{/* Grid of ads for this campaign */}
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-								{ads.map((ad) => renderAdCard(ad))}
+								{ads.map((ad) => renderAdCard(ad, ads))}
 							</div>
 						</div>
 					))}
@@ -685,113 +623,6 @@ export function AdList({ refreshSignal }: AdListProps) {
 					No ads found. Try uploading some ads first.
 				</div>
 			)}
-
-			{/* Reorder Modal */}
-			<Dialog open={isReorderModalOpen} onOpenChange={setIsReorderModalOpen}>
-				<DialogContent className="max-w-3xl">
-					<DialogHeader>
-						<DialogTitle>
-							Reorder Ads in{" "}
-							{campaigns.find((c) => c.id === campaignToReorder)?.name}
-						</DialogTitle>
-					</DialogHeader>
-
-					<div className="py-4">
-						<div className="mb-4">
-							{adToSwap ? (
-								<div className="bg-blue-50 p-3 rounded-lg mb-4">
-									<p className="text-sm text-blue-700 mb-2">
-										Select another ad to swap positions with:
-										<span className="font-medium ml-1">
-											{reorderingAds.find((ad) => ad.id === adToSwap)?.title ||
-												"Selected Ad"}
-										</span>
-									</p>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setAdToSwap(null)}
-									>
-										Cancel Selection
-									</Button>
-								</div>
-							) : (
-								<p className="text-sm text-gray-500 mb-2">
-									Choose an ad to swap positions or directly edit position
-									numbers.
-								</p>
-							)}
-						</div>
-
-						<div className="space-y-2 max-h-[400px] overflow-y-auto">
-							{reorderingAds.map((ad) => (
-								<div
-									key={ad.id}
-									className={`
-                    flex items-center p-3 rounded-lg border
-                    ${adToSwap === ad.id ? "border-blue-500 bg-blue-50" : "border-gray-200"}
-                    ${adToSwap && adToSwap !== ad.id ? "cursor-pointer hover:bg-gray-50" : ""}
-                  `}
-									onClick={() => {
-										if (adToSwap && adToSwap !== ad.id) {
-											swapAds(adToSwap, ad.id);
-										} else if (!adToSwap) {
-											setAdToSwap(ad.id);
-										}
-									}}
-								>
-									<div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full mr-3">
-										{ad.position}
-									</div>
-
-									<div className="flex-grow">
-										<div className="font-medium">
-											{ad.title || `Ad #${ad.position}`}
-										</div>
-										<div className="text-sm text-gray-500">{ad.ad_size}</div>
-									</div>
-
-									<div className="ml-4 w-32">
-										<Select
-											value={ad.position?.toString() || ""}
-											onValueChange={(val) =>
-												updateAdPosition(ad.id, parseInt(val))
-											}
-										>
-											<SelectTrigger onClick={(e) => e.stopPropagation()}>
-												<SelectValue placeholder="Position" />
-											</SelectTrigger>
-											<SelectContent>
-												{reorderingAds.map((_, index) => (
-													<SelectItem
-														key={index}
-														value={(index + 1).toString()}
-													>
-														Position {index + 1}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-								</div>
-							))}
-						</div>
-					</div>
-
-					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => {
-								setIsReorderModalOpen(false);
-								setAdToSwap(null);
-							}}
-						>
-							Cancel
-						</Button>
-						<Button onClick={saveNewOrder}>Save Order</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
 		</div>
 	);
 }
