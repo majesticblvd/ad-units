@@ -317,7 +317,7 @@ export default function CampaignSharePage({ params }: { params: { token: string 
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { type: "spring", stiffness: 100, damping: 15 }
+      transition: { type: "spring" as const, stiffness: 100, damping: 15 }
     },
     exit: {
       opacity: 0,
@@ -327,15 +327,15 @@ export default function CampaignSharePage({ params }: { params: { token: string 
   }
 
   const sidebarVariants = {
-    open: { 
+    open: {
       x: 0,
       width: "300px",
-      transition: { type: "spring", stiffness: 300, damping: 30 }
+      transition: { type: "spring" as const, stiffness: 300, damping: 30 }
     },
-    closed: { 
+    closed: {
       x: 20,
       width: 0,
-      transition: { type: "spring", stiffness: 300, damping: 30 }
+      transition: { type: "spring" as const, stiffness: 300, damping: 30 }
     }
   }
 
