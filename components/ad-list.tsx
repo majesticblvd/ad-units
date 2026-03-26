@@ -542,17 +542,7 @@ export function AdList({ refreshSignal }: AdListProps) {
 
 	const groupedCampaignAds = groupedAdsByCampaign();
 
-	const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
-	const selectedCampaignAds = selectedCampaign
-		? ads.filter((a) => a.campaign_id === selectedCampaign.id)
-		: [];
-
 	const totalAdsCount = ads.length;
-	const totalFilesize = ads.reduce(
-		(sum, ad) => sum + (ad.filesize || 0),
-		0,
-	);
-	const uniqueSizes = new Set(ads.map((a) => a.ad_size));
 
 	return (
 		<div className="space-y-6">
@@ -575,69 +565,46 @@ export function AdList({ refreshSignal }: AdListProps) {
 					/>
 				</div>
 
-				<div className={cn("flex items-center gap-4 text-sm text-muted-foreground min-h-10 transition-opacity", isCampaignSwitching && "opacity-50 pointer-events-none")}>
-					{selectedCampaignId === "all" ? (
-						<div className="flex items-center gap-4 flex-wrap">
-							<span>
-								<span className="font-medium text-foreground">{campaigns.length}</span>{" "}
-								{campaigns.length === 1 ? "campaign" : "campaigns"}
+				{selectedCampaignId !== "all" && (
+					<div className={cn("flex items-center gap-3 text-sm text-muted-foreground min-h-10 transition-opacity", isCampaignSwitching && "opacity-50 pointer-events-none")}>
+						{isShareLoading ? (
+							<LoaderCircle className="h-4 w-4 animate-spin" />
+						) : shareUrl ? (
+							<span className="inline-flex items-center gap-2">
+								<a
+									href={shareUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="break-all underline text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+								>
+									{shareUrl}
+								</a>
+								<button
+									type="button"
+									onClick={copyShareUrl}
+									className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									aria-label="Copy share link"
+								>
+									{isShareCopied ? (
+										<Check className="h-4 w-4" />
+									) : (
+										<Copy className="h-4 w-4" />
+									)}
+								</button>
 							</span>
-							<span>
-								<span className="font-medium text-foreground">{totalAdsCount}</span>{" "}
-								{totalAdsCount === 1 ? "ad" : "ads"}
-							</span>
-							<span>
-								<span className="font-medium text-foreground">{uniqueSizes.size}</span>{" "}
-								{uniqueSizes.size === 1 ? "size" : "sizes"}
-							</span>
-							{totalFilesize > 0 && (
-								<span>{formatBytes(totalFilesize)} total</span>
-							)}
-						</div>
-					) : (
-						<div className="flex items-center gap-3 flex-wrap">
-							<span>
-								<span className="font-medium text-foreground">{selectedCampaignAds.length}</span>{" "}
-								{selectedCampaignAds.length === 1 ? "ad" : "ads"}
-							</span>
-							{isShareLoading ? (
-								<LoaderCircle className="h-4 w-4 animate-spin" />
-							) : shareUrl ? (
-								<span className="inline-flex items-center gap-2">
-									<span className="text-muted-foreground">•</span>
-									<a
-										href={shareUrl}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="break-all underline text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-									>
-										{shareUrl}
-									</a>
-									<button
-										type="button"
-										onClick={copyShareUrl}
-										className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-										aria-label="Copy share link"
-									>
-										{isShareCopied ? (
-											<Check className="h-4 w-4" />
-										) : (
-											<Copy className="h-4 w-4" />
-										)}
-									</button>
-								</span>
-							) : (
-								<span>Share link unavailable</span>
-							)}
-						</div>
-					)}
-				</div>
+						) : (
+							<span>Share link unavailable</span>
+						)}
+					</div>
+				)}
 			</div>
 
 			{isDataLoading || isCampaignSwitching ? (
-				<div className="flex items-center justify-center flex-1 min-h-[50vh] text-gray-500">
-					<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-					{isDataLoading ? "Loading ads..." : "Switching campaign..."}
+				<div className="flex flex-col items-center justify-center flex-1 min-h-[50vh] gap-4">
+					<LoaderCircle className="h-12 w-12 text-muted-foreground animate-spin" />
+					<p className="text-sm text-muted-foreground">
+						{isDataLoading ? "Loading ads..." : "Switching campaign..."}
+					</p>
 				</div>
 			) : groupedCampaignAds.length > 0 ? (
 				<div className="space-y-10">

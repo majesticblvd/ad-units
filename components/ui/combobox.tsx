@@ -47,7 +47,7 @@ export function Combobox({
 }: ComboboxProps) {
 	const [open, setOpen] = useState(false);
 
-	const selectedLabel = options.find((opt) => opt.value === value)?.label;
+	const selectedOption = options.find((opt) => opt.value === value);
 
 	return (
 		<Popover open={disabled ? false : open} onOpenChange={setOpen}>
@@ -64,7 +64,18 @@ export function Combobox({
 					)}
 				>
 					<span className="truncate">
-						{selectedLabel || placeholder}
+						{selectedOption ? (
+							<>
+								{selectedOption.label}
+								{selectedOption.subLabel && (
+									<span className="ml-1 text-muted-foreground">
+										({selectedOption.subLabel})
+									</span>
+								)}
+							</>
+						) : (
+							placeholder
+						)}
 					</span>
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>

@@ -73,7 +73,7 @@ export default function Home() {
 
 	return (
 		<main className="container w-full max-w-none">
-			<div className="header items-center mx-4 mt-4 rounded-lg bg-black flex justify-between p-6">
+			<div className="header items-center mx-4 mt-4 rounded-lg bg-black flex justify-between p-6 shadow-sm">
 				<div className="flex items-end gap-2">
 					{hasQueryParams ? (
 						<Link href="/">
@@ -124,8 +124,8 @@ export default function Home() {
 
 			<div className="grid grid-cols-1 md:grid-cols-4 m-4 gap-6">
 				<div className="flex flex-col pb-4">
-					<div className="bg-gray-200 sticky top-4 px-4 py-4 rounded-lg col-span-1 flex flex-col max-h-[calc(100vh-2rem)] overflow-y-auto">
-						<h2 className="text-2xl font-semibold mb-4">Upload New Ad</h2>
+					<div className="bg-gray-100 border border-gray-200 shadow-sm sticky top-4 px-4 py-4 rounded-lg col-span-1 flex flex-col max-h-[calc(100vh-2rem)] overflow-y-auto">
+						<h2 className="text-2xl font-semibold mb-4 text-gray-900">Upload New Ad</h2>
 						<AdUploadForm onUploadSuccess={handleUploadSuccess} />
 					</div>
 				</div>
