@@ -191,7 +191,7 @@ export function ShareDialogButton({
 										href={shareUrl}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="break-all font-medium text-blue-700 underline hover:no-underline"
+										className="break-all font-medium text-blue-700 underline hover:no-underline cursor-pointer"
 									>
 										{shareUrl}
 									</a>

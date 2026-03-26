@@ -599,43 +599,40 @@ export function AdList({ refreshSignal }: AdListProps) {
 				</div>
 
 				{selectedCampaignId !== "all" && (
-					<div className="flex gap-2 items-center">
-						<div className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm">
-							{isShareLoading ? (
-								<span className="inline-flex items-center">
-									<LoaderCircle className="h-4 w-4 animate-spin" />
-									<span className="sr-only">Generating share link</span>
-								</span>
-							) : shareUrl ? (
+					<div className="flex items-center gap-3 text-sm">
+						{isShareLoading ? (
+							<span className="inline-flex items-center">
+								<LoaderCircle className="h-4 w-4 animate-spin" />
+								<span className="sr-only">Generating share link</span>
+							</span>
+						) : shareUrl ? (
+							<>
 								<a
 									href={shareUrl}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="break-all underline"
+									className="break-all underline text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 								>
 									{shareUrl}
 								</a>
-							) : (
-								<span className="text-muted-foreground">
-									Share link unavailable
-								</span>
-							)}
-						</div>
-						<Button
-							size="icon"
-							variant="outline"
-							onClick={copyShareUrl}
-							disabled={isShareLoading || !shareUrl}
-							aria-label="Copy share link"
-						>
-							{isShareLoading ? (
-								<LoaderCircle className="h-4 w-4 animate-spin" />
-							) : isShareCopied ? (
-								<Check className="h-4 w-4" />
-							) : (
-								<Copy className="h-4 w-4" />
-							)}
-						</Button>
+								<button
+									type="button"
+									onClick={copyShareUrl}
+									className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									aria-label="Copy share link"
+								>
+									{isShareCopied ? (
+										<Check className="h-4 w-4" />
+									) : (
+										<Copy className="h-4 w-4" />
+									)}
+								</button>
+							</>
+						) : (
+							<span className="text-muted-foreground">
+								Share link unavailable
+							</span>
+						)}
 					</div>
 				)}
 			</div>
