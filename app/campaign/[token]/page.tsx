@@ -164,6 +164,10 @@ export default function CampaignSharePage({ params }: { params: { token: string 
         throw error
       }
 
+      if (!data?.[0]) {
+        throw new Error("Failed to create comment")
+      }
+
       // Get the new comment's data from the response
       const newCommentObj: Comment = {
         id: data[0].id,

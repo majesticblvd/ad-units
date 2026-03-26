@@ -69,7 +69,7 @@ export default function Home() {
     <main className="container w-full max-w-none">
       <div className="header items-center m-1 rounded-lg bg-black  flex justify-between p-6">
         <div className="flex items-end gap-2">
-          <img className="w-28 h-auto" src="/svgs/pxl-logo-light.svg" alt="" />
+          <img className="w-28 h-auto" src="/svgs/pxl-logo-light.svg" alt="PXL Logo" />
           {/* <h1 className="text-3xl font-regular text-white">Ads</h1> */}
         </div>
         

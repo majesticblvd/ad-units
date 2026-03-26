@@ -3,16 +3,6 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
 const ppNeueMontreal = localFont({
   src: "./fonts/PPNeueMontreal-Variable.woff",
   variable: "--font-pp-neue-montreal",
@@ -32,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${ppNeueMontreal.variable} ${ppNeueMontreal.variable} antialiased`}
+        className={`${ppNeueMontreal.variable} antialiased`}
       >
         {children}
         <Toaster />
