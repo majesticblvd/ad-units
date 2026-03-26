@@ -50,6 +50,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 	const [description, setDescription] = useState("");
 	const [isNewCampaignDialogOpen, setIsNewCampaignDialogOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
 
 	const extractZipFiles = async (zipFile: File): Promise<File[]> => {
 		const { default: JSZip } = await import("jszip");
@@ -127,6 +128,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 	};
 
 	const handleCreateCampaign = async () => {
+		setIsCreatingCampaign(true);
 		try {
 			const shareToken = generateShareToken();
 			const { data, error } = await supabase
@@ -158,6 +160,8 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 				description: "Failed to create campaign.",
 				variant: "destructive",
 			});
+		} finally {
+			setIsCreatingCampaign(false);
 		}
 	};
 
@@ -299,7 +303,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 								<DialogTitle>Create New Campaign</DialogTitle>
 							</DialogHeader>
 							<div className="space-y-4 pt-4">
-								<div>
+								<div className="space-y-2">
 									<Label htmlFor="newCampaignName">Campaign Name</Label>
 									<Input
 										id="newCampaignName"
@@ -311,9 +315,12 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 								<Button
 									type="button"
 									onClick={handleCreateCampaign}
-									disabled={!newCampaignName}
+									disabled={!newCampaignName || isCreatingCampaign}
 								>
-									Create Campaign
+									{isCreatingCampaign && (
+										<LoaderCircle className="animate-spin" />
+									)}
+									{isCreatingCampaign ? "Creating..." : "Create Campaign"}
 								</Button>
 							</div>
 						</DialogContent>

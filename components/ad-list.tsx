@@ -452,7 +452,9 @@ export function AdList({ refreshSignal }: AdListProps) {
 		if (selectedCampaignId !== "all") {
 			// If a specific campaign is selected, just return those ads
 			const campaign = campaigns.find((c) => c.id === selectedCampaignId);
-			return campaign ? [{ campaign, ads: filteredAds }] : [];
+			return campaign && filteredAds.length > 0
+				? [{ campaign, ads: filteredAds }]
+				: [];
 		}
 
 		// Group all ads by campaign
