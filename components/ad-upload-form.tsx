@@ -43,6 +43,7 @@ const AD_SIZES = [
 	{ value: "320x50", label: "Mobile Banner (320x50)" },
 	{ value: "468x60", label: "Banner (468x60)" },
 	{ value: "970x90", label: "Large Leaderboard (970x90)" },
+	{ value: "970x250", label: "Billboard (970x250)" },
 	{ value: "160x600", label: "Wide Skyscraper (160x600)" },
 	{ value: "custom", label: "Custom Size" },
 ];
