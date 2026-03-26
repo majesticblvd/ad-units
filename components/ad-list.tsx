@@ -610,15 +610,17 @@ export function AdList({ refreshSignal }: AdListProps) {
 				<div className="space-y-10">
 					{groupedCampaignAds.map(({ campaign, ads }) => (
 						<div key={campaign.id} className="space-y-4">
-							{/* Campaign header with count of ads */}
-							<div className="border-b border-gray-300 pb-2">
-								<h2 className="text-xl font-bold">
-									{campaign.name}
-									<span className="ml-2 text-sm font-normal text-gray-500">
-										({ads.length} {ads.length === 1 ? "ad" : "ads"})
-									</span>
-								</h2>
-							</div>
+							{/* Campaign header — only shown when viewing all campaigns */}
+							{selectedCampaignId === "all" && (
+								<div className="border-b border-gray-300 pb-2">
+									<h2 className="text-xl font-bold">
+										{campaign.name}
+										<span className="ml-2 text-sm font-normal text-gray-500">
+											({ads.length} {ads.length === 1 ? "ad" : "ads"})
+										</span>
+									</h2>
+								</div>
+							)}
 
 							{/* Grid of ads for this campaign */}
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
