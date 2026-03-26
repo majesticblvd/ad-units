@@ -13,13 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { Textarea } from "./ui/textarea";
@@ -309,24 +303,18 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
-			<div>
+			<div className="space-y-1.5">
 				<Label htmlFor="campaign">Campaign</Label>
 				<div className="flex gap-2">
-					<Select
+					<Combobox
+						options={campaigns.map((c) => ({ value: c.id, label: c.name }))}
 						value={selectedCampaignId}
 						onValueChange={setSelectedCampaignId}
-					>
-						<SelectTrigger className="bg-transparent border-gray-300 shadow-none">
-							<SelectValue placeholder="Select Campaign" />
-						</SelectTrigger>
-						<SelectContent>
-							{campaigns.map((campaign) => (
-								<SelectItem key={campaign.id} value={campaign.id}>
-									{campaign.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+						placeholder="Select Campaign"
+						searchPlaceholder="Search campaigns..."
+						emptyMessage="No campaigns found."
+						className="bg-white border-gray-300 shadow-none"
+					/>
 
 					<Dialog
 						open={isNewCampaignDialogOpen}
@@ -348,7 +336,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 										id="newCampaignName"
 										value={newCampaignName}
 										onChange={(e) => setNewCampaignName(e.target.value)}
-										className="bg-transparent border-gray-300 shadow-none"
+										className="bg-white border-gray-300 shadow-none"
 									/>
 								</div>
 								<Button
@@ -364,42 +352,39 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 				</div>
 			</div>
 
-			<div>
+			<div className="space-y-1.5">
 				<Label htmlFor="title">Ad Title (Optional)</Label>
 				<Input
 					id="title"
 					value={title}
 					onChange={(e) => setTitle(e.target.value)}
 					placeholder="Enter a title for your ad"
-					className="bg-transparent border-gray-300 shadow-none"
+					className="bg-white border-gray-300 shadow-none"
 				/>
 			</div>
 
-			<div>
+			<div className="space-y-1.5">
 				<Label htmlFor="description">Description (Optional)</Label>
 				<Textarea
 					id="description"
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
 					placeholder="Describe the animation or add any relevant notes"
-					className="bg-transparent border-gray-300 shadow-none min-h-[100px]"
+					className="bg-white border-gray-300 shadow-none min-h-[100px]"
 				/>
 			</div>
 
-			<div>
+			<div className="space-y-1.5">
 				<Label htmlFor="adSize">Ad Size</Label>
-				<Select value={adSize} onValueChange={setAdSize}>
-					<SelectTrigger className="bg-transparent border-gray-300 shadow-none">
-						<SelectValue placeholder="Select Ad Size" />
-					</SelectTrigger>
-					<SelectContent>
-						{AD_SIZES.map((size) => (
-							<SelectItem key={size.value} value={size.value}>
-								{size.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+				<Combobox
+					options={AD_SIZES}
+					value={adSize}
+					onValueChange={setAdSize}
+					placeholder="Select Ad Size"
+					searchPlaceholder="Search sizes..."
+					emptyMessage="No sizes found."
+					className="bg-white border-gray-300 shadow-none"
+				/>
 
 				{adSize === "custom" && (
 					<div className="mt-2 grid grid-cols-2 gap-2">
@@ -410,7 +395,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 								type="number"
 								value={customWidth}
 								onChange={(e) => setCustomWidth(e.target.value)}
-								className="bg-transparent border-gray-300 shadow-none"
+								className="bg-white border-gray-300 shadow-none"
 								required
 							/>
 						</div>
@@ -421,7 +406,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 								type="number"
 								value={customHeight}
 								onChange={(e) => setCustomHeight(e.target.value)}
-								className="bg-transparent border-gray-300 shadow-none"
+								className="bg-white border-gray-300 shadow-none"
 								required
 							/>
 						</div>
@@ -429,7 +414,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 				)}
 			</div>
 
-			<div>
+			<div className="space-y-1.5">
 				<Label htmlFor="files">Ad Files</Label>
 				<Input
 					id="files"
@@ -437,7 +422,7 @@ export function AdUploadForm({ onUploadSuccess }: AdUploadFormProps) {
 					onChange={(e) => handleFilesChange(e.target.files)}
 					multiple
 					required
-					className="bg-transparent border-gray-300 shadow-none"
+					className="bg-white border-gray-300 shadow-none"
 				/>
 				{files.length > 0 && !zipStatusMessage && (
 					<p className="mt-1 text-xs text-gray-500">

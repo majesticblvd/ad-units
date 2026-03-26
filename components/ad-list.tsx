@@ -8,7 +8,9 @@ import {
 	Copy,
 	LoaderCircle,
 	RefreshCcw,
+	Trash2,
 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
 	AlertDialog,
@@ -27,7 +29,6 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -35,6 +36,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { formatBytes } from "@/lib/utils";
@@ -71,9 +73,22 @@ interface AdListProps {
 }
 
 export function AdList({ refreshSignal }: AdListProps) {
+	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [ads, setAds] = useState<Ad[]>([]);
 	const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-	const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all");
+
+	const selectedCampaignId = searchParams.get("campaign") || "all";
+	const setSelectedCampaignId = (value: string) => {
+		const params = new URLSearchParams(searchParams.toString());
+		if (value === "all") {
+			params.delete("campaign");
+		} else {
+			params.set("campaign", value);
+		}
+		const query = params.toString();
+		router.replace(query ? `?${query}` : window.location.pathname);
+	};
 	const [replayCounters, setReplayCounters] = useState<{
 		[key: string]: number;
 	}>({});
@@ -546,11 +561,11 @@ export function AdList({ refreshSignal }: AdListProps) {
 					<AlertDialog>
 						<AlertDialogTrigger asChild>
 							<Button
-								variant="destructive"
+								variant="ghost"
 								size="sm"
-								className="h-8 text-xs px-2"
+								className="h-8 p-1 hover:bg-gray-100"
 							>
-								Delete
+								<Trash2 size={14} />
 							</Button>
 						</AlertDialogTrigger>
 						<AlertDialogContent>
@@ -578,24 +593,19 @@ export function AdList({ refreshSignal }: AdListProps) {
 
 	return (
 		<div className="space-y-6">
-			<div className="space-y-2">
+			<div className="space-y-4">
 				<div className="flex gap-2">
-					<Select
+					<Combobox
+						options={[
+							{ value: "all", label: "All Campaigns" },
+							...campaigns.map((c) => ({ value: c.id, label: c.name })),
+						]}
 						value={selectedCampaignId}
 						onValueChange={setSelectedCampaignId}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select Campaign" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All Campaigns</SelectItem>
-							{campaigns.map((campaign) => (
-								<SelectItem key={campaign.id} value={campaign.id}>
-									{campaign.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+						placeholder="Select Campaign"
+						searchPlaceholder="Search campaigns..."
+						emptyMessage="No campaigns found."
+					/>
 				</div>
 
 				{selectedCampaignId !== "all" && (

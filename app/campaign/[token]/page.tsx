@@ -3,6 +3,7 @@
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { MessageSquare, RefreshCcw, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import { AdPreview } from "@/components/ad-preview";
 import { Button } from "@/components/ui/button";
@@ -407,6 +408,15 @@ export default function CampaignSharePage({
 
 	return (
 		<main className="container w-full max-w-none relative">
+			<div className="header items-center mx-4 mt-4 rounded-lg bg-black flex justify-between p-6">
+				<Link href="/">
+					<img
+						className="w-28 h-auto"
+						src="/svgs/pxl-logo-light.svg"
+						alt="PXL Logo"
+					/>
+				</Link>
+			</div>
 			<div className="grid bg-gray-50 grid-cols-1 md:grid-cols-4 p-4 gap-6">
 				<div className="flex gap-4 flex-col">
 					{/* Left sidebar */}

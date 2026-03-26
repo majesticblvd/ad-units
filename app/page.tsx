@@ -1,7 +1,8 @@
 "use client";
 
 import { LogOut, User } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdList } from "@/components/ad-list";
 import { AdUploadForm } from "@/components/ad-upload-form";
@@ -18,6 +19,8 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function Home() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const hasQueryParams = searchParams.toString().length > 0;
 	const [refreshSignal, setRefreshSignal] = useState(0);
 	const [userEmail, setUserEmail] = useState<string | null>(null);
 	const supabase = createClient();
@@ -72,12 +75,21 @@ export default function Home() {
 		<main className="container w-full max-w-none">
 			<div className="header items-center mx-4 mt-4 rounded-lg bg-black flex justify-between p-6">
 				<div className="flex items-end gap-2">
-					<img
-						className="w-28 h-auto"
-						src="/svgs/pxl-logo-light.svg"
-						alt="PXL Logo"
-					/>
-					{/* <h1 className="text-3xl font-regular text-white">Ads</h1> */}
+					{hasQueryParams ? (
+						<Link href="/">
+							<img
+								className="w-28 h-auto"
+								src="/svgs/pxl-logo-light.svg"
+								alt="PXL Logo"
+							/>
+						</Link>
+					) : (
+						<img
+							className="w-28 h-auto"
+							src="/svgs/pxl-logo-light.svg"
+							alt="PXL Logo"
+						/>
+					)}
 				</div>
 
 				{/* User Account Dropdown */}
@@ -119,7 +131,7 @@ export default function Home() {
 				</div>
 
 				<div className="col-span-3">
-					<h2 className="text-2xl font-semibold mb-4">Ad List</h2>
+					<h2 className="text-2xl font-semibold mb-4">Campaigns</h2>
 					<AdList refreshSignal={refreshSignal} />
 				</div>
 			</div>

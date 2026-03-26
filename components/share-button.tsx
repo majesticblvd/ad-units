@@ -1,7 +1,18 @@
 "use client";
 
-import { Check, Copy, LoaderCircle, Share } from "lucide-react";
+import { Check, Copy, LoaderCircle, Share, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -125,6 +136,32 @@ export function ShareDialogButton({
 		}
 	};
 
+	const handleDeleteShareLink = async () => {
+		if (!selectedCampaignId) return;
+
+		try {
+			const { error } = await supabase
+				.from("campaigns")
+				.update({ share_token: null })
+				.eq("id", selectedCampaignId);
+
+			if (error) throw error;
+
+			setShareUrl("");
+			toast({
+				title: "Share link deleted",
+				description: "The share link has been removed.",
+			});
+		} catch (error) {
+			console.error("Error deleting share link:", error);
+			toast({
+				title: "Error",
+				description: "Failed to delete share link.",
+				variant: "destructive",
+			});
+		}
+	};
+
 	const handleDialogClose = (open: boolean) => {
 		setIsDialogOpen(open);
 		if (!open) {
@@ -203,6 +240,27 @@ export function ShareDialogButton({
 										<Copy className="h-4 w-4" />
 									)}
 								</Button>
+								<AlertDialog>
+									<AlertDialogTrigger asChild>
+										<Button size="icon" variant="ghost" className="hover:bg-gray-100">
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									</AlertDialogTrigger>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>Delete share link?</AlertDialogTitle>
+											<AlertDialogDescription>
+												This will remove the share link. Anyone with the old link will no longer be able to access the campaign.
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter>
+											<AlertDialogCancel>Cancel</AlertDialogCancel>
+											<AlertDialogAction onClick={handleDeleteShareLink}>
+												Delete
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
 							</div>
 							<p className="text-sm text-muted-foreground">
 								{isChrome
